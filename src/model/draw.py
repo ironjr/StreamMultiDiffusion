@@ -172,7 +172,7 @@ class MagicDraw(nn.Module):
         # Calculate text embeddings.
         text_embeds = self.get_text_embeds(prompts, negative_prompts)  # [2 * len(prompts), 77, 768]
         latent = torch.randn(
-            (1, self.unet.in_channels, height // 8, width // 8), dtype=self.dtype, device=self.device)
+            (1, self.unet.config.in_channels, height // 8, width // 8), dtype=self.dtype, device=self.device)
         bg_latent = self.encode_imgs(T.ToTensor()(background)[None].to(dtype=self.dtype, device=self.device))
         bg_noise = latent.clone()
 
@@ -229,7 +229,7 @@ class MagicDraw(nn.Module):
 
         # Calculate text embeddings.
         text_embeds = self.get_text_embeds(prompts, negative_prompts)  # [2, 77, 768]
-        latent = torch.randn((1, self.unet.in_channels, height // 8, width // 8), device=self.device)
+        latent = torch.randn((1, self.unet.config.in_channels, height // 8, width // 8), device=self.device)
 
         with torch.autocast('cuda'):
             for i, t in enumerate(tqdm(self.scheduler.timesteps)):
