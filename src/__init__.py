@@ -1,1 +1,1 @@
-from model import MagicDraw, FastMagicDraw, FasterMagicDraw
+from model import StableMultiDiffusion

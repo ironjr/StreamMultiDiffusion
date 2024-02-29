@@ -1,3 +1,2 @@
-from .draw import MagicDraw
-from .fastdraw import FastMagicDraw
+from .draw import StableMultiDiffusion
 from .streamdraw import StreamMagicDraw

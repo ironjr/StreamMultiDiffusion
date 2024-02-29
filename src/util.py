@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 from PIL import Image
 
 import numpy as np
@@ -160,5 +160,52 @@ def blend(
         bg = T.ToTensor()(bg)
     if not isinstance(mask, torch.Tensor):
         mask = (T.ToTensor()(mask) < 0.5).float()[:1]
-    mask = gaussian_lowpass(mask[None], std)[0]
+    mask = gaussian_lowpass(mask[None], std)[0].clip_(0, 1)
     return T.ToPILImage()(fg * mask + bg * (1 - mask))
+
+
+def get_panorama_views(
+    panorama_height: int,
+    panorama_width: int,
+    window_size: int = 64,
+) -> tuple[List[Tuple[int]], torch.Tensor]:
+    stride = window_size // 2
+
+    is_horizontal = panorama_width > panorama_height
+    panorama_height = (panorama_height + 7) // 8
+    panorama_width = (panorama_width + 7) // 8
+    num_blocks_height = (panorama_height - window_size + stride - 1) // stride + 1
+    num_blocks_width = (panorama_width - window_size + stride - 1) // stride + 1
+    total_num_blocks = num_blocks_height * num_blocks_width
+
+    half_fwd = torch.linspace(0, 1, (window_size + 1) // 2)
+    half_rev = half_fwd.flip(0)
+    if window_size % 2 == 1:
+        half_rev = half_rev[1:]
+    c = torch.cat((half_fwd, half_rev))
+    one = torch.ones_like(c)
+    f = c.clone()
+    f[:window_size // 2] = 1
+    b = c.clone()
+    b[-(window_size // 2):] = 1
+
+    h = [one] if num_blocks_height == 1 else [f] + [c] * (num_blocks_height - 2) + [b]
+    w = [one] if num_blocks_width == 1 else [f] + [c] * (num_blocks_width - 2) + [b]
+
+    views = []
+    masks = torch.zeros(total_num_blocks, panorama_height, panorama_width) # (1, n, h, w)
+    for i in range(total_num_blocks):
+        hi, wi = i // num_blocks_width, i % num_blocks_width
+        h_start = hi * stride
+        h_end = min(h_start + window_size, panorama_height)
+        w_start = wi * stride
+        w_end = min(w_start + window_size, panorama_width)
+        views.append((h_start, h_end, w_start, w_end))
+
+        h_width = h_end - h_start
+        w_width = w_end - w_start
+        masks[i, h_start:h_end, w_start:w_end] = h[hi][:h_width, None] * w[wi][None, :w_width]
+
+    masks = masks[None]
+    assert (masks.sum(dim=1) == 1).all(), 'Sum of the mask weights at each pixel must be unity.'
+    return views, masks

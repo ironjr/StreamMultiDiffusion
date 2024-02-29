@@ -1,5 +1,6 @@
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
-from diffusers import DiffusionPipeline, LCMScheduler, AutoencoderTiny
+from diffusers import DiffusionPipeline, LCMScheduler, EulerDiscreteScheduler, AutoencoderTiny
+from huggingface_hub import hf_hub_download
 
 import torch
 import torch.nn as nn
@@ -20,11 +21,11 @@ class StreamMagicDraw(nn.Module):
         self,
         device: torch.device,
         dtype: torch.dtype = torch.float16,
-        sd_version: Literal['1.5', 'xl'] = '1.5',
+        sd_version: Literal['1.5'] = '1.5',
         hf_key: Optional[str] = None,
         lora_key: Optional[str] = None,
         use_tiny_vae: bool = True,
-        t_index_list: List[int] = [0, 16, 32, 45], # Magic number.
+        t_index_list: List[int] = [0, 8, 16, 32, 45], # Magic number.
         width: int = 512,
         height: int = 512,
         frame_buffer_size: int = 1,
@@ -35,9 +36,10 @@ class StreamMagicDraw(nn.Module):
         seed: int = 2024,
         autoflush: bool = True,
         default_mask_std: float = 8.0,
-        default_mask_strength: float = 0.9,
-        default_prompt_strength: float = 0.9,
+        default_mask_strength: float = 1.0,
+        default_prompt_strength: float = 0.95,
         prompt_queue_capacity: int = 256,
+        mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'continuous',
     ) -> None:
         super().__init__()
 
@@ -50,6 +52,7 @@ class StreamMagicDraw(nn.Module):
         self.default_mask_std = default_mask_std
         self.default_mask_strength = default_mask_strength
         self.default_prompt_strength = default_prompt_strength
+        self.mask_type = mask_type
 
         ### State definition
 
@@ -76,16 +79,28 @@ class StreamMagicDraw(nn.Module):
         }
 
         print(f'[INFO]     Loading Stable Diffusion...')
+        get_scheduler = lambda pipe: LCMScheduler.from_config(pipe.scheduler.config)
         if hf_key is not None:
             print(f'[INFO]     Using Hugging Face custom model key: {hf_key}')
             model_key = hf_key
             variant = None
-        if self.sd_version == 'xl':
-            if hf_key is None:
-                model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
-                variant='fp16'
-            lora_key = 'latent-consistency/lcm-lora-sdxl'
-        elif self.sd_version == '1.5':
+        # if self.sd_version == 'xl':
+        #     if hf_key is None:
+        #         model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
+        #         variant='fp16'
+        #     lora_key = 'latent-consistency/lcm-lora-sdxl' # LCM-LoRA
+        # elif self.sd_version == 'xl-turbo':
+        #     raise NotImplementedError
+        # elif self.sd_version == 'xl-lightning':
+        #     if hf_key is None:
+        #         model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
+        #         variant='fp16'
+        #     repo = 'ByteDance/SDXL-Lightning'
+        #     ckpt = 'sdxl_lightning_4step_lora.safetensors'
+        #     lora_key = 'latent-consistency/lcm-lora-sdxl' # SDXL-Lightning
+        #     get_scheduler = lambda pipe: EulerDiscreteScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
+        # elif self.sd_version == '1.5':
+        if self.sd_version == '1.5':
             if hf_key is None:
                 model_key = 'runwayml/stable-diffusion-v1-5'
                 variant='fp16'
@@ -119,11 +134,13 @@ class StreamMagicDraw(nn.Module):
             AutoencoderTiny.from_pretrained('madebyollin/taesd').to(device=self.device, dtype=self.dtype)
             if use_tiny_vae else self.pipe.vae
         )
-        self.tokenizer = self.pipe.tokenizer
-        self.text_encoder = self.pipe.text_encoder
+        # self.tokenizer = self.pipe.tokenizer
+        # self.text_encoder = self.pipe.text_encoder
+        # self.tokenizer_2 = self.pipe.tokenizer_2 if hasattr(self.pipe, 'tokenizer_2') else None
+        # self.text_encoder_2 = self.pipe.text_encoder_2 if hasattr(self.pipe, 'text_encoder_2') else None
         self.unet = self.pipe.unet
 
-        self.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
+        self.scheduler = get_scheduler(self.pipe)
         self.scheduler.set_timesteps(num_inference_steps)
 
         # StreamDiffusion setting.
@@ -293,8 +310,9 @@ class StreamMagicDraw(nn.Module):
         self.alpha_prod_t_sqrt = alpha_prod_t_sqrt.repeat_interleave(self.frame_bff_size, dim=0)
         self.beta_prod_t_sqrt = beta_prod_t_sqrt.repeat_interleave(self.frame_bff_size, dim=0)
 
-        noise_lvs = ((1 - self.scheduler.alphas_cumprod) ** 0.5).to(self.device)[self.sub_timesteps_tensor]
-        self.noise_lvs = noise_lvs[:, None, None, None]
+        noise_lvs = ((1 - self.scheduler.alphas_cumprod[self.sub_timesteps_tensor].to(self.device)) ** 0.5)
+        self.noise_lvs = noise_lvs[None, :, None, None, None]
+        self.next_noise_lvs = torch.cat([noise_lvs[1:], noise_lvs.new_zeros(1)])[None, :, None, None, None]
 
     @torch.no_grad()
     def get_text_prompts(self, image: Image.Image) -> str:
@@ -433,13 +451,39 @@ class StreamMagicDraw(nn.Module):
         if isinstance(strength, (list, tuple)):
             strength = torch.as_tensor(strength, dtype=torch.float, device=self.device)
 
-        masks = gaussian_lowpass(masks, std) * strength[:, None, None, None]
-        masks = masks.unsqueeze(1).repeat(1, len(self.noise_lvs), 1, 1, 1) > self.noise_lvs[None]
-        masks = rearrange(F.interpolate(
-            rearrange(masks.float(), 'p t () h w -> (p t) () h w'),
-            size=(self.latent_height, self.latent_width),
-            mode='nearest',
-        ).to(self.dtype), '(p t) () h w -> p t () h w', p=len(std))
+        if (std > 0).any():
+            std = torch.where(std > 0, std, 1e-5)
+            masks = gaussian_lowpass(masks, std)
+        # NOTE: This `strength` aligns with `denoising strength`. However, with LCM, using strength < 0.96
+        #       gives unpleasant results.
+        masks = masks * strength[:, None, None, None]
+        masks = masks.unsqueeze(1).repeat(1, self.noise_lvs.shape[1], 1, 1, 1)
+
+        if self.mask_type == 'discrete':
+            # Discrete mode.
+            masks = masks > self.noise_lvs
+        elif self.mask_type == 'semi-continuous':
+            # Semi-continuous mode (continuous at the last step only).
+            masks = torch.cat((
+                masks[:, :-1] > self.noise_lvs[:, :-1],
+                (
+                    (masks[:, -1:] - self.next_noise_lvs[:, -1:])
+                    / (self.noise_lvs[:, -1:] - self.next_noise_lvs[:, -1:])
+                ).clip_(0, 1),
+            ), dim=1)
+        elif self.mask_type == 'continuous':
+            # Continuous mode: Have the exact same `1` coverage with discrete mode, but the mask gradually
+            #                  decreases continuously after the discrete mode boundary to become `0` at the
+            #                  next lower threshold.
+            masks = ((masks - self.next_noise_lvs) / (self.noise_lvs - self.next_noise_lvs)).clip_(0, 1)
+
+        # NOTE: Post processing mask strength does not align with conventional 'denoising_strength'. However,
+        #       fine-grained mask alpha channel tuning is available with this form.
+        # masks = masks * strength[None, :, None, None, None]
+
+        masks = rearrange(masks.float(), 'p t () h w -> (p t) () h w')
+        masks = F.interpolate(masks, size=(self.latent_height, self.latent_width), mode='nearest')
+        masks = rearrange(masks.to(self.dtype), '(p t) () h w -> p t () h w', p=len(std))
         return masks, strength, std, original_masks
 
     @torch.no_grad()
@@ -769,13 +813,13 @@ class StreamMagicDraw(nn.Module):
         background_negative_prompt: str = '',
         negative_prompts: Union[str, List[str]] = '',
         suffix: Optional[str] = None, #', background is ',
-        prompt_strength: float = 1.0,
-        mask_strength: float = 1.0,
-        mask_std: Union[torch.Tensor, float] = 10.0,
+        prompt_strengths: float = 1.0,
+        mask_strengths: float = 1.0,
+        mask_stds: Union[torch.Tensor, float] = 10.0,
     ) -> None:
         # The order of this registration should not be changed!
         self.update_background(background, background_prompt, background_negative_prompt)
-        self.update_layers(prompts, negative_prompts, suffix, prompt_strength, masks, mask_strength, mask_std)
+        self.update_layers(prompts, negative_prompts, suffix, prompt_strengths, masks, mask_strengths, mask_stds)
 
     def update(
         self,
@@ -891,6 +935,8 @@ class StreamMagicDraw(nn.Module):
             t_list,  # (B,)
             encoder_hidden_states=self.prompt_embeds,  # (B, 77, 768)
             return_dict=False,
+            # TODO: Add SDXL Support.
+            # added_cond_kwargs={'text_embeds': add_text_embeds, 'time_ids': add_time_ids},
         )[0]  # (B, 4, h, w)
 
         ### noise_pred_text, noise_pred_uncond: (T * p, 4, h, w)
