@@ -1,2 +1,3 @@
-# MagicBrush
-Real-time 2D creation/editing tool with StableDiffusion
+# StreamMultiDiffusion
+
+Real-time interactive region-based text-to-image generation tool.

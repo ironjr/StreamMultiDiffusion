@@ -1,3 +1,23 @@
+# Copyright (c) 2024 StreamMultiDiffusion Authors
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import argparse
 import random
 import time
@@ -11,7 +31,7 @@ from emoji import emoji_count
 import gradio as gr
 from huggingface_hub import snapshot_download
 
-from model import StreamMagicDraw
+from model import StreamMultiDiffusion
 
 
 ### Utils
@@ -82,7 +102,7 @@ def is_empty_image(im: Image.Image) -> bool:
 
 ### Argument passing
 
-parser = argparse.ArgumentParser(description='Streaming Magic Draw demonstation.')
+parser = argparse.ArgumentParser(description='StreamMultiDiffusion demonstation.')
 parser.add_argument('-H', '--height', type=int, default=768)
 parser.add_argument('-W', '--width', type=int, default=768)
 parser.add_argument('--display_col', type=int, default=2)
@@ -98,7 +118,7 @@ opt = parser.parse_args()
 
 device = f'cuda:{opt.device}' if opt.device >= 0 else 'cpu'
 
-streamer = StreamMagicDraw(
+streamer = StreamMultiDiffusion(
     device,
     sd_version='1.5',
     hf_key=opt.model,
@@ -521,15 +541,15 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     # Front-end initialized to the default values.
     state.prompt_names = [
         opt.background_button_name,
-        '🦅 Eagle',
-        '🍩 Donuts',
         '👧 Girl',
+        '🐶Dog',
+        '🍩 Donuts',
     ] + ['🎨 New Palette' for _ in range(opt.max_palettes - 3)]
     state.prompts = [
         '',
-        'A mighty cool-looking eagle',
-        'Delicious chewy donuts',
         'A girl smiling at viewer',
+        'Doggy body part',
+        'Delicious chewy donuts',
     ] + ['' for _ in range(opt.max_palettes - 3)]
     state.neg_prompts = [opt.default_negative_prompt for _ in range(opt.max_palettes + 1)]
     state.prompt_strengths = [opt.default_prompt_strength for _ in range(opt.max_palettes)]
@@ -543,30 +563,31 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     ### Demo user interface
 
+#         <h1 >StreamMultiDiffusion: Mask Quantization for Seamless Interactive Image Generation</h1>
+#         <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
+#         </br>
+#         <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
+#             <a href='https://arxiv.org/abs/2311.13384'>
+#                 <img src="https://img.shields.io/badge/arXiv-2311.13384-red">
+#             </a>
+#             &nbsp;
+#             <a href='https://jaerinlee.com/research/StreamMultiDiffusion'>
+#                 <img src='https://img.shields.io/badge/Homepage-StreamMultiDiffusion-green' alt='Project Page'>
+#             </a>
+#             &nbsp;
+#             <a href='https://github.com/luciddreamer-cvlab/LucidDreamer'>
+#                 <img src='https://img.shields.io/github/stars/ironjr/StreamMultiDiffusion?label=Github&color=blue'>
+#             </a>
+#             &nbsp;
+#             <a href='https://twitter.com/_ironjr_'>
+#                 <img src='https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_'>
+#             </a>
+#         </div>
     gr.HTML(
         """
 <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
     <div>
-        <h1 >MagicDraw: Mask Quantization for Seamless Interactive Image Generation</h1>
-        <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
-        </br>
-        <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
-            <a href='https://arxiv.org/abs/2311.13384'>
-                <img src="https://img.shields.io/badge/arXiv-2311.13384-red">
-            </a>
-            &nbsp;
-            <a href='https://jaerinlee.com/research/magicdraw'>
-                <img src='https://img.shields.io/badge/Homepage-MagicDraw-green' alt='Project Page'>
-            </a>
-            &nbsp;
-            <a href='https://github.com/luciddreamer-cvlab/LucidDreamer'>
-                <img src='https://img.shields.io/github/stars/ironjr/MagicDraw?label=Github&color=blue'>
-            </a>
-            &nbsp;
-            <a href='https://twitter.com/_ironjr_'>
-                <img src='https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_'>
-            </a>
-        </div>
+ <h1 >StreamMultiDiffusion</h1>
     </div>
 </div>
 <div>
@@ -624,15 +645,15 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                 """
             )
 
-            gr.HTML(
-                """
-<div style="display: flex; justify-content: center; align-items: center; text-align: center;">
-    <h5 style="margin: 0;"><b>... or run in your own 🤗 space!</b></h5>
-</div>
-                """
-            )
+#             gr.HTML(
+#                 """
+# <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
+#     <h5 style="margin: 0;"><b>... or run in your own 🤗 space!</b></h5>
+# </div>
+#                 """
+#             )
 
-            gr.DuplicateButton()
+            # gr.DuplicateButton()
 
         with gr.Column(scale=4):
 
@@ -644,10 +665,10 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         iface.ctrl_semantic = gr.ImageEditor(
                             image_mode='RGBA',
                             sources=['upload', 'clipboard', 'webcam'],
-                            transforms=['crop'],
-                            crop_size="1:1",
+                            # transforms=['crop'],
+                            # crop_size="1:1",
                             type='pil',
-                            label='MagicDraw Interactive Input',
+                            label='StreamMultiDiffusion Interactive Input',
                             every=1.0,
                         )
 

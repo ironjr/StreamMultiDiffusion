@@ -1,6 +1,28 @@
-from typing import List, Tuple, Union
-from PIL import Image
+# Copyright (c) 2024 StreamMultiDiffusion Authors
 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import concurrent.futures
+import time
+from typing import Any, Callable, List, Tuple, Union
+
+from PIL import Image
 import numpy as np
 
 import torch
@@ -160,7 +182,8 @@ def blend(
         bg = T.ToTensor()(bg)
     if not isinstance(mask, torch.Tensor):
         mask = (T.ToTensor()(mask) < 0.5).float()[:1]
-    mask = gaussian_lowpass(mask[None], std)[0].clip_(0, 1)
+    if std > 0:
+        mask = gaussian_lowpass(mask[None], std)[0].clip_(0, 1)
     return T.ToPILImage()(fg * mask + bg * (1 - mask))
 
 
@@ -170,10 +193,7 @@ def get_panorama_views(
     window_size: int = 64,
 ) -> tuple[List[Tuple[int]], torch.Tensor]:
     stride = window_size // 2
-
     is_horizontal = panorama_width > panorama_height
-    panorama_height = (panorama_height + 7) // 8
-    panorama_width = (panorama_width + 7) // 8
     num_blocks_height = (panorama_height - window_size + stride - 1) // stride + 1
     num_blocks_width = (panorama_width - window_size + stride - 1) // stride + 1
     total_num_blocks = num_blocks_height * num_blocks_width
@@ -193,7 +213,7 @@ def get_panorama_views(
     w = [one] if num_blocks_width == 1 else [f] + [c] * (num_blocks_width - 2) + [b]
 
     views = []
-    masks = torch.zeros(total_num_blocks, panorama_height, panorama_width) # (1, n, h, w)
+    masks = torch.zeros(total_num_blocks, panorama_height, panorama_width) # (n, h, w)
     for i in range(total_num_blocks):
         hi, wi = i // num_blocks_width, i % num_blocks_width
         h_start = hi * stride
@@ -206,6 +226,64 @@ def get_panorama_views(
         w_width = w_end - w_start
         masks[i, h_start:h_end, w_start:w_end] = h[hi][:h_width, None] * w[wi][None, :w_width]
 
-    masks = masks[None]
-    assert (masks.sum(dim=1) == 1).all(), 'Sum of the mask weights at each pixel must be unity.'
-    return views, masks
+    # Sum of the mask weights at each pixel `masks.sum(dim=1)` must be unity.
+    return views, masks[None] # (1, n, h, w)
+
+
+def shift_to_mask_bbox_center(im: torch.Tensor, mask: torch.Tensor, reverse: bool = False) -> List[int]:
+    h, w = mask.shape[-2:]
+    device = mask.device
+    mask = mask.reshape(-1, h, w)
+    # assert mask.shape[0] == im.shape[0]
+    h_occupied = mask.sum(dim=-2) > 0
+    w_occupied = mask.sum(dim=-1) > 0
+    l = torch.argmax(h_occupied * torch.arange(w, 0, -1).to(device), 1, keepdim=True).cpu()
+    r = torch.argmax(h_occupied * torch.arange(w).to(device), 1, keepdim=True).cpu()
+    t = torch.argmax(w_occupied * torch.arange(h, 0, -1).to(device), 1, keepdim=True).cpu()
+    b = torch.argmax(w_occupied * torch.arange(h).to(device), 1, keepdim=True).cpu()
+    tb = (t + b + 1) // 2
+    lr = (l + r + 1) // 2
+    shifts = (tb - (h // 2), lr - (w // 2))
+    shifts = torch.cat(shifts, dim=1) # (p, 2)
+    if reverse:
+        shifts = shifts * -1
+    return torch.stack([i.roll(shifts=s.tolist(), dims=(-2, -1)) for i, s in zip(im, shifts)], dim=0)
+
+
+class Streamer:
+    def __init__(self, fn: Callable, ema_alpha: float = 0.9) -> None:
+        self.fn = fn
+        self.ema_alpha = ema_alpha
+
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self.future = self.executor.submit(fn)
+        self.image = None
+
+        self.prev_exec_time = 0
+        self.ema_exec_time = 0
+
+    @property
+    def throughput(self) -> float:
+        return 1.0 / self.ema_exec_time if self.ema_exec_time else float('inf')
+
+    def timed_fn(self) -> Any:
+        start = time.time()
+        res = self.fn()
+        end = time.time()
+        self.prev_exec_time = end - start
+        self.ema_exec_time = self.ema_exec_time * self.ema_alpha + self.prev_exec_time * (1 - self.ema_alpha)
+        return res
+
+    def __call__(self) -> Any:
+        if self.future.done() or self.image is None:
+            # get the result (the new image) and start a new task
+            image = self.future.result()
+            self.future = self.executor.submit(self.timed_fn)
+            self.image = image
+            return image
+        else:
+            # if self.fn() is not ready yet, use the previous image
+            # NOTE: This assumes that we have access to a previously generated image here.
+            # If there's no previous image (i.e., this is the first invocation), you could fall 
+            # back to some default image or handle it differently based on your requirements.
+            return self.image
