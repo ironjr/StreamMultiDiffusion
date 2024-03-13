@@ -350,7 +350,7 @@ class StreamMultiDiffusion(nn.Module):
     def get_text_prompts(self, image: Image.Image) -> str:
         question = 'Question: What are in the image? Answer:'
         inputs = self.i2t_processor(image, question, return_tensors='pt')
-        out = self.i2t_model.generate(**inputs)
+        out = self.i2t_model.generate(**inputs, max_new_tokens=77)
         prompt = self.i2t_processor.decode(out[0], skip_special_tokens=True).strip()
         return prompt
 

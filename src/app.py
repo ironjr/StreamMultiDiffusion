@@ -124,9 +124,9 @@ streamer = StreamMultiDiffusion(
     hf_key=opt.model,
     height=opt.height,
     width=opt.width,
-    t_index_list=[0, 8, 16, 32, 45],
     cfg_type="none",
     seed=opt.seed,
+    bootstrap_steps=0,
 )
 
 prompt_suggestions = [
@@ -542,14 +542,14 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     state.prompt_names = [
         opt.background_button_name,
         '👧 Girl',
-        '🐶Dog',
-        '🍩 Donuts',
+        '🐶 Dog',
+        '💐 Garden',
     ] + ['🎨 New Palette' for _ in range(opt.max_palettes - 3)]
     state.prompts = [
         '',
         'A girl smiling at viewer',
         'Doggy body part',
-        'Delicious chewy donuts',
+        'Flower garden',
     ] + ['' for _ in range(opt.max_palettes - 3)]
     state.neg_prompts = [opt.default_negative_prompt for _ in range(opt.max_palettes + 1)]
     state.prompt_strengths = [opt.default_prompt_strength for _ in range(opt.max_palettes)]
