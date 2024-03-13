@@ -60,7 +60,7 @@ class StreamMultiDiffusion(nn.Module):
         default_prompt_strength: float = 0.95,
         bootstrap_steps: int = 1,
         bootstrap_mix_steps: float = 1.0,
-        bootstrap_leak_sensitivity: float = 0.2,
+        # bootstrap_leak_sensitivity: float = 0.2,
         prompt_queue_capacity: int = 256,
         mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'continuous',
     ) -> None:
@@ -75,11 +75,12 @@ class StreamMultiDiffusion(nn.Module):
         self.default_mask_std = default_mask_std
         self.default_mask_strength = default_mask_strength
         self.default_prompt_strength = default_prompt_strength
-        self.bootstrap_steps = bootstrap_steps
+        self.bootstrap_steps = (
+            bootstrap_steps > torch.arange(len(t_index_list))).to(dtype=self.dtype, device=self.device)
         self.bootstrap_mix_steps = bootstrap_mix_steps
         self.bootstrap_mix_ratios = (
             bootstrap_mix_steps - torch.arange(len(t_index_list), dtype=self.dtype, device=self.device)).clip_(0, 1)
-        self.bootstrap_leak_sensitivity = bootstrap_leak_sensitivity
+        # self.bootstrap_leak_sensitivity = bootstrap_leak_sensitivity
         self.mask_type = mask_type
 
         ### State definition
@@ -415,9 +416,8 @@ class StreamMultiDiffusion(nn.Module):
             self.state['background'].negative_prompt = negative_prompt
             self.state['background'].embed = embed
 
-            if self.bootstrap_steps > 0:
+            if self.bootstrap_steps[0] > 0:
                 mix_ratio = self.bootstrap_mix_ratios[:, None, None, None]
-                # Treat the first foreground latent as the background latent if one does not exist.
                 self.bootstrap_latent = mix_ratio * self.white + (1.0 - mix_ratio) * self.state['background'].latent
 
             self.ready_checklist['background_registered'] = True
@@ -957,32 +957,28 @@ class StreamMultiDiffusion(nn.Module):
         p = self.num_layers
         x_t_latent = x_t_latent.repeat_interleave(p, dim=0)  # (T * p, 4, h, w)
 
-        # self.bootstrap_steps = bootstrap_steps
-        # self.boostrap_mix_steps = boostrap_mix_steps
-        # self.bootstrap_leak_sensitivity = bootstrap_leak_sensitivity
-#         if self.bootstrap_steps > 0:
-#             mix_ratio = min(1, max(0, boostrap_mix_steps - i))
-#             # Treat the first foreground latent as the background latent if one does not exist.
-#             bg_latent_ = mix_ratio * self.white + (1.0 - mix_ratio) * self.background.latent
-#             bg_latent_ = self.scheduler_add_noise(bg_latent_, None, i)
+        if self.bootstrap_steps[0] > 0:
+            # Background bootstrapping.
+            bootstrap_latent = self.scheduler.add_noise(
+                self.bootstrap_latent,
+                self.stock_noise,
+                torch.tensor(self.sub_timesteps_tensor, device=self.device),
+            )
+            x_t_latent = rearrange(x_t_latent, '(t p) c h w -> p t c h w', p=p)
+            bootstrap_mask = (
+                self.masks * self.bootstrap_steps[None, :, None, None, None]
+                + (1.0 - self.bootstrap_steps[None, :, None, None, None])
+            ) # (p, t, c, h, w)
+            x_t_latent = (1.0 - bootstrap_mask) * bootstrap_latent[None] + bootstrap_mask * x_t_latent
+            x_t_latent = rearrange(x_t_latent, 'p t c h w -> (t p) c h w')
 
-#             bootstrap_latent = torch.concat([
-#                 self.scheduler.add_noise(
-#                     self.bootstrap_latent[:1],
-#                     self.stock_noise[1:],
-#                     torch.tensor(self.t_list[1:], device=self.device),
-#                 ),
-#                 self.bootstrap_latent,
-#             ], dim=0)
-
-#             latent_ = (1.0 - fg_mask_) * bootstrap_latent + fg_mask_ * latent_
-#             # Centering.
-#             latent_ = shift_to_mask_bbox_center(latent_, fg_mask_, reverse=True)
+            # Centering.
+            x_t_latent = shift_to_mask_bbox_center(x_t_latent, rearrange(self.masks, 'p t c h w -> (t p) c h w'), reverse=True)
 
         t_list = self.sub_timesteps_tensor_  # (T * p,)
         if self.guidance_scale > 1.0 and self.cfg_type == 'initialize':
-            x_t_latent_plus_uc = torch.concat([x_t_latent[0:p], x_t_latent], dim=0)  # (T * p + 1, 4, h, w)
-            t_list = torch.concat([t_list[0:p], t_list], dim=0)  # (T * p + 1, 4, h, w)
+            x_t_latent_plus_uc = torch.concat([x_t_latent[:p], x_t_latent], dim=0)  # (T * p + 1, 4, h, w)
+            t_list = torch.concat([t_list[:p], t_list], dim=0)  # (T * p + 1, 4, h, w)
         elif self.guidance_scale > 1.0 and self.cfg_type == 'full':
             x_t_latent_plus_uc = torch.concat([x_t_latent, x_t_latent], dim=0)  # (2 * T * p, 4, h, w)
             t_list = torch.concat([t_list, t_list], dim=0)  # (2 * T * p,)
@@ -998,12 +994,29 @@ class StreamMultiDiffusion(nn.Module):
             # added_cond_kwargs={'text_embeds': add_text_embeds, 'time_ids': add_time_ids},
         )[0]  # (B, 4, h, w)
 
+        if self.bootstrap_steps[0] > 0:
+            # Uncentering.
+            bootstrap_mask = rearrange(self.masks, 'p t c h w -> (t p) c h w')
+            if self.guidance_scale > 1.0 and self.cfg_type == 'initialize':
+                bootstrap_mask_ = torch.concat([bootstrap_mask[:p], bootstrap_mask], dim=0)
+            elif self.guidance_scale > 1.0 and self.cfg_type == 'full':
+                bootstrap_mask_ = torch.concat([bootstrap_mask, bootstrap_mask], dim=0)
+            else:
+                bootstrap_mask_ = bootstrap_mask
+            model_pred = shift_to_mask_bbox_center(model_pred, bootstrap_mask_)
+            x_t_latent = shift_to_mask_bbox_center(x_t_latent, bootstrap_mask)
+
+            # # Remove leakage (optional).
+            # leak = (latent_ - bg_latent_).pow(2).mean(dim=1, keepdim=True)
+            # leak_sigmoid = torch.sigmoid(leak / self.bootstrap_leak_sensitivity) * 2 - 1
+            # fg_mask_ = fg_mask_ * leak_sigmoid
+
         ### noise_pred_text, noise_pred_uncond: (T * p, 4, h, w)
         ### self.stock_noise, init_noise: (T, 4, h, w)
 
         if self.guidance_scale > 1.0 and self.cfg_type == 'initialize':
             noise_pred_text = model_pred[p:]
-            self.stock_noise_ = torch.concat([model_pred[0:p], self.stock_noise_[p:]], dim=0)
+            self.stock_noise_ = torch.concat([model_pred[:p], self.stock_noise_[p:]], dim=0)
         elif self.guidance_scale > 1.0 and self.cfg_type == 'full':
             noise_pred_uncond, noise_pred_text = model_pred.chunk(2)
         else:
@@ -1019,32 +1032,16 @@ class StreamMultiDiffusion(nn.Module):
         # compute the previous noisy sample x_t -> x_t-1
         denoised_batch = self.scheduler_step_batch(model_pred, x_t_latent, idx)
 
-        # if self.bootstrap_steps > 0:
-        #     # Uncentering.
-        #     latent_ = shift_to_mask_bbox_center(latent_, fg_mask_)
-        #     # Remove leakage (optional).
-        #     leak = (latent_ - bg_latent_).pow(2).mean(dim=1, keepdim=True)
-        #     leak_sigmoid = torch.sigmoid(leak / self.bootstrap_leak_sensitivity) * 2 - 1
-        #     fg_mask_ = fg_mask_ * leak_sigmoid
-
         if self.cfg_type in ('self' , 'initialize'):
             scaled_noise = self.beta_prod_t_sqrt_ * self.stock_noise_
             delta_x = self.scheduler_step_batch(model_pred, scaled_noise, idx)
 
-            # if self.bootstrap_steps > 0:
-            #     # Uncentering.
-            #     latent_ = shift_to_mask_bbox_center(latent_, fg_mask_)
-            #     # Remove leakage (optional).
-            #     leak = (latent_ - bg_latent_).pow(2).mean(dim=1, keepdim=True)
-            #     leak_sigmoid = torch.sigmoid(leak / self.bootstrap_leak_sensitivity) * 2 - 1
-            #     fg_mask_ = fg_mask_ * leak_sigmoid
-
             # Do mask edit.
-            alpha_next = torch.concat([self.alpha_prod_t_sqrt_[p:], torch.ones_like(self.alpha_prod_t_sqrt_[0:p])], dim=0)
+            alpha_next = torch.concat([self.alpha_prod_t_sqrt_[p:], torch.ones_like(self.alpha_prod_t_sqrt_[:p])], dim=0)
             delta_x = alpha_next * delta_x
-            beta_next = torch.concat([self.beta_prod_t_sqrt_[p:], torch.ones_like(self.beta_prod_t_sqrt_[0:p])], dim=0)
+            beta_next = torch.concat([self.beta_prod_t_sqrt_[p:], torch.ones_like(self.beta_prod_t_sqrt_[:p])], dim=0)
             delta_x = delta_x / beta_next
-            init_noise = torch.concat([self.init_noise_[p:], self.init_noise_[0:p]], dim=0)
+            init_noise = torch.concat([self.init_noise_[p:], self.init_noise_[:p]], dim=0)
             self.stock_noise_ = init_noise + delta_x
 
         p2 = len(self.t_list) - 1
@@ -1085,7 +1082,7 @@ class StreamMultiDiffusion(nn.Module):
         latent = torch.randn((1, self.unet.config.in_channels, self.latent_height, self.latent_width),
             dtype=self.dtype, device=self.device)  # (1, 4, h, w)
         latent = torch.cat((latent, self.x_t_latent_buffer), dim=0)  # (t, 4, h, w)
-        self.stock_noise = torch.cat((self.init_noise[0:1], self.stock_noise[:-1]), dim=0)  # (t, 4, h, w)
+        self.stock_noise = torch.cat((self.init_noise[:1], self.stock_noise[:-1]), dim=0)  # (t, 4, h, w)
         if self.cfg_type in ('self', 'initialize'):
             self.stock_noise_ = self.stock_noise.repeat_interleave(self.num_layers, dim=0)  # (T * p, 77, 768)
 
