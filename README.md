@@ -1,6 +1,14 @@
-# 🦦 StreamMultiDiffusion 🦦
+# 🦦🪄 StreamMultiDiffusion
 
-*Real-time* *interactive* *multiple*-text-to-image generation from user-assigned *regional* text prompts.
+https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
+
+## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
+> ##### Authors: [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
+
+<p align="center">
+    <img src="assets/logo_cvlab.png" height=60>
+</p>
+
 
 <div align="center">
 
@@ -12,17 +20,12 @@
 
 </div>
 
+StreamMultiDiffusion is a *real-time* *interactive* *multiple*-text-to-image generation from user-assigned *regional* text prompts.
+
+In other words, **you can now draw using brushes that paints *meanings* instead of *colors***!
 
 
-https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
 
-
-## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
-> ##### Authors: [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
-
-<p align="center">
-    <img src="assets/logo_cvlab.png" height=60>
-</p>
 
 ---
 
