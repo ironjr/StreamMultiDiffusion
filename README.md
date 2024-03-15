@@ -92,18 +92,35 @@ The interface is summarized in the image below ⬇️:
   <img src="./assets/user_interface.png" width=90%>
 </p>
 
-
-Work in progress!
-
+| No. | Component Name | Description |
+| --- | -------------- | ----------- |
+| 1 | *Semantic palette* | Creates and manages text prompt-mask pairs, a.k.a., _semantic brushes_. |
+| 2 | Create new _semantic brush_ btn. | Creates a new text prompt-mask pair. |
+| 3 | Main drawing pad | User draws at each semantic layers with a brush tool. |
+| 4 | Layer selection | Each layer corresponds to each of the prompt mask in the *semantic palette*. |
+| 5 | Background image upload | User uploads background image to start drawing. |
+| 6 | Drawing tools | Using brushes and erasers to interactively edit the prompt masks. |
+| 7 | Play button | Switches between streaming/step-by-step mode. |
+| 8 | Display | Generated images are streamed through this component. |
+| 9 | Mask alpha control | Changes the mask alpha value before quantization. Controls local content blending, but extremely sensitive. Recommended: >0.95 |
+| 10 | Mask blur std. dev. control | Changes the standard deviation of the quantized mask of the current semantic brush. Less sensitive than mask alpha control. |
+| 11 | Seed control | Changes the seed of the application. May not be needed, since we generate infinite stream of images. |
+| 12 | Prompt edit | User can interactively change the positive/negative prompts at need. |
+| 13 | Prompt strength control | Prompt embedding mix ratio between the current & the background. Helps global content blending. Recommended: >0.75 |
+| 14 | Brush name edit | Adds convenience by changing the name of the brush. Does not affect the generation. Just for preference. |
 
 ### User Interface (CLI)
 
 Coming Soon!
 
-### Basic Usage
+### Basic Usage (GUI)
 
 Work in progress!
 
+
+### Basic Usage (CLI)
+
+Coming Soon!
 
 ---
 
