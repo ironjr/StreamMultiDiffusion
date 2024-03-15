@@ -24,16 +24,24 @@
 
 </div>
 
+<p align="center">
+  <img src="./assets/figure_one.png" width=100%>
+</p>
+
 tl;dr: StreamMultiDiffusion is a *real-time* *interactive* *multiple*-text-to-image generation from user-assigned *regional* text prompts.
 
-In other words, **you can now draw using brushes that paints *meanings* instead of *colors***!
+In other words, **you can now draw ✍️ using brushes 🖌️ that paints *meanings* 🧠 in addition to *colors*** 🌈!
 
 Our paper is mainly about establishing the compatibility between region-based controlling techniques of [MultiDiffusion](https://multidiffusion.github.io/) and acceleration techniques of [LCM](https://latent-consistency-models.github.io/) and [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion).
 To our surprise, these works were not compatible before, limiting the possible applications from both branches of works.
-The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is compared using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
+The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
 
 https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
 
+The video means that this project finally lets you work with **large size image generation with fine-grained regional prompt control**.
+Previously, this was not feasible at all.
+Taking an hour per trial means that you cannot sample multiple times to pick the best generation you want or to tune the generation process to realize your intention.
+However, we have decreased the latency **from an hour to a minute**, making the technology workable for creators (hopefully).
 
 ---
 
@@ -65,7 +73,7 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 
 We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
 This section is a summary of its contents.
-Although we expect everything to work fine, there may be unexpected bugs or misssed features in the implementation.
+Although we expect everything to work fine, there may be unexpected bugs or missed features in the implementation.
 We are always welcoming issues and pull requests from you to improve this project! 🤗
 
 
