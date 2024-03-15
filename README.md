@@ -17,8 +17,8 @@
 https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
 
 
-> #### [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
-> ##### [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
+## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
+> ##### Authors: [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
 
 <p align="center">
     <img src="assets/logo_cvlab.png" height=60>
