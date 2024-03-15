@@ -46,6 +46,8 @@ pip install -r requirements.txt
 
 ## ⚡ Usage
 
+### Overview
+
 StreamMultiDiffusion is served in three different forms.
 
 1. The main interactive demo powered by Gradio is available at `src/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
@@ -61,8 +63,49 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 
 ### More Detailed Instruction
 
-Coming soon!
+We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
+This section is a summary of its contents.
+Although we expect everything to work fine, there may be unexpected bugs or misssed features in the implementation.
+We are always welcoming issues and pull requests from you to improve this project! 🤗
 
+### What is _Semantic Palette_ Anyway?
+
+**Semantic palette** basically means that you paint things with semantics, i.e., text prompts, just like how you may use brush tools in commercial image editing software, such as Adobe Photoshop, etc.
+Our acceleration technique for region-based controlled image generation allows users to edit their prompt masks similarly to drawing.
+We couldn't find a good preexisting name for this type of user interface, so we named it as _semantic palette_, hoping for it to make sense to you. 😄
+
+### Demo Application Architecture
+
+There are two types of transaction data between the front-end and the back-end (`model.streammultidiffusion_pipeline.StreamMultiDiffusion`) of the application: a (1) background image object and a (2) list of text prompt-mask pairs.
+We choose to call a pair of the latter as a _semantic brush_.
+Despite its fancy name, a _semantic brush_ is just a pair of a text prompt and a regional mask assigned to the prompt, possibly with additional mask-controlling parameters.
+Users interact with the application by registering and updating these two types of data to control the image generation stream.
+The interface is summarized in the image below ⬇️:
+
+<p align="center">
+  <img src="./assets/app_design.png" width=90%>
+</p>
+
+### User Interface (GUI)
+
+<p align="center">
+  <img src="./assets/user_interface.png" width=90%>
+</p>
+
+
+Work in progress!
+
+
+### User Interface (CLI)
+
+Coming Soon!
+
+### Basic Usage
+
+Work in progress!
+
+
+---
 
 ## 🚩 **Updates**
 
