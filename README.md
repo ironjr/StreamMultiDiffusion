@@ -34,10 +34,14 @@ In other words, **you can now draw using brushes that paints *meanings* instead 
 
 Our paper is mainly about establishing the compatibility between region-based controlling techniques of [MultiDiffusion](https://multidiffusion.github.io/) and acceleration techniques of [LCM](https://latent-consistency-models.github.io/) and [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion).
 To our surprise, these works were not compatible before, limiting the possible applications from both branches of works.
-The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is compared using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
+The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
 
 https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
 
+The video means that this project finally lets you work with **large size image generation with fine-grained regional prompt control**.
+Previously, this was not feasible at all.
+Taking an hour per trial means that you cannot sample multiple times to pick the best generation you want or to tune the generation process to realize your intention.
+However, we have decreased the latency **from an hour to a minute**, making the technology workable for creators (hopefully).
 
 ---
 
