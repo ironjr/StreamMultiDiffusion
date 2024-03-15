@@ -1,6 +1,8 @@
-# 🦦🪄 StreamMultiDiffusion
+ded# 🦦🪄 StreamMultiDiffusion
 
 https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
+
+
 
 ## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
 > ##### Authors: [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
@@ -25,6 +27,7 @@ StreamMultiDiffusion is a *real-time* *interactive* *multiple*-text-to-image gen
 In other words, **you can now draw using brushes that paints *meanings* instead of *colors***!
 
 
+https://github.com/ironjr/StreamMultiDiffusion/assets/12259041/b678cbe2-43d5-4a76-aebb-0a922a4de0a1
 
 
 ---
