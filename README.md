@@ -83,14 +83,6 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
 
 
-### More Detailed Instruction
-
-We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
-This section is a summary of its contents.
-Although we expect everything to work fine, there may be unexpected bugs or missed features in the implementation.
-We are always welcoming issues and pull requests from you to improve this project! 🤗
-
-
 ### Basic Usage (GUI)
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
@@ -108,6 +100,17 @@ We are always welcoming issues and pull requests from you to improve this projec
 ### Basic Usage (CLI)
 
 Coming Soon!
+
+
+---
+
+
+## 💼 Further Information
+
+We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
+This section is a summary of its contents.
+Although we expect everything to work fine, there may be unexpected bugs or missed features in the implementation.
+We are always welcoming issues and pull requests from you to improve this project! 🤗
 
 
 ### User Interface (GUI)
@@ -132,6 +135,7 @@ Coming Soon!
 | 12 | Prompt edit | User can interactively change the positive/negative prompts at need. |
 | 13 | Prompt strength control | Prompt embedding mix ratio between the current & the background. Helps global content blending. Recommended: >0.75 |
 | 14 | Brush name edit | Adds convenience by changing the name of the brush. Does not affect the generation. Just for preference. |
+
 
 ### User Interface (CLI)
 
