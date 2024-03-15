@@ -195,3 +195,13 @@ Our code is based on the projects: [StreamDiffusion](https://github.com/cumulo-a
 ## 📧 Contact
 
 If you have any questions, please email `jarin.lee@gmail.com`.
+
+## ⭐ Star History
+
+<a href="https://star-history.com/#ironjr/StreamMultiDiffusion&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date" />
+  </picture>
+</a>
