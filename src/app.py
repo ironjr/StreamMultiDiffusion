@@ -108,6 +108,7 @@ parser.add_argument('-W', '--width', type=int, default=768)
 parser.add_argument('--display_col', type=int, default=2)
 parser.add_argument('--display_row', type=int, default=2)
 parser.add_argument('--model', type=str, default=None)
+parser.add_argument('--bootstrap_steps', type=int, default=1)
 parser.add_argument('--seed', type=int, default=2024)
 parser.add_argument('--device', type=int, default=0)
 parser.add_argument('--port', type=int, default=8000)
@@ -126,7 +127,7 @@ streamer = StreamMultiDiffusion(
     width=opt.width,
     cfg_type="none",
     seed=opt.seed,
-    bootstrap_steps=1,
+    bootstrap_steps=opt.bootstrap_steps,
 )
 
 prompt_suggestions = [
@@ -664,8 +665,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         iface.ctrl_semantic = gr.ImageEditor(
                             image_mode='RGBA',
                             sources=['upload', 'clipboard', 'webcam'],
-                            # transforms=['crop'],
-                            # crop_size="1:1",
+                            transforms=['crop'],
+                            crop_size=(opt.width, opt.height),
                             type='pil',
                             label='StreamMultiDiffusion Interactive Input',
                             every=1.0,
