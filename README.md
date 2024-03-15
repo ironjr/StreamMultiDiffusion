@@ -1,7 +1,9 @@
 # 🦦🪄 StreamMultiDiffusion
 
 
-https://github.com/ironjr/StreamMultiDiffusion/assets/12259041/51645b43-13f1-462e-838c-64870fb884ba
+<p align="center">
+  <img src="./assets/demo.gif" width=90%>
+</p>
 
 
 ## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
