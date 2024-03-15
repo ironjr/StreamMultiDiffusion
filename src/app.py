@@ -563,31 +563,30 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     ### Demo user interface
 
-#         <h1 >StreamMultiDiffusion: Mask Quantization for Seamless Interactive Image Generation</h1>
-#         <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
-#         </br>
-#         <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
-#             <a href='https://arxiv.org/abs/2311.13384'>
-#                 <img src="https://img.shields.io/badge/arXiv-2311.13384-red">
-#             </a>
-#             &nbsp;
-#             <a href='https://jaerinlee.com/research/StreamMultiDiffusion'>
-#                 <img src='https://img.shields.io/badge/Homepage-StreamMultiDiffusion-green' alt='Project Page'>
-#             </a>
-#             &nbsp;
-#             <a href='https://github.com/luciddreamer-cvlab/LucidDreamer'>
-#                 <img src='https://img.shields.io/github/stars/ironjr/StreamMultiDiffusion?label=Github&color=blue'>
-#             </a>
-#             &nbsp;
-#             <a href='https://twitter.com/_ironjr_'>
-#                 <img src='https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_'>
-#             </a>
-#         </div>
     gr.HTML(
         """
 <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
     <div>
- <h1 >StreamMultiDiffusion</h1>
+        <h1 >StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control</h1>
+        <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
+        </br>
+        <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
+            <a href='https://arxiv.org/abs/2403.09055'>
+                <img src="https://img.shields.io/badge/arXiv-2403.09055-red">
+            </a>
+            &nbsp;
+            <a href='https://jaerinlee.com/research/StreamMultiDiffusion'>
+                <img src='https://img.shields.io/badge/Project-Page-green' alt='Project Page'>
+            </a>
+            &nbsp;
+            <a href='https://github.com/ironjr/StreamMultiDiffusion'>
+                <img src='https://img.shields.io/github/stars/ironjr/StreamMultiDiffusion?label=Github&color=blue'>
+            </a>
+            &nbsp;
+            <a href='https://twitter.com/_ironjr_'>
+                <img src='https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_'>
+            </a>
+        </div>
     </div>
 </div>
 <div>
