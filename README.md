@@ -45,6 +45,20 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
+## ⭐️ Features
+
+
+| ![usage1](./assets/feature1.gif) | ![usage2](./assets/feature3.gif) |  ![usage3](./assets/feature2.gif)  |
+| :----------------------------: | :----------------------------: | :----------------------------: |
+
+1. **Interactive image generation from scratch with fine-grained region control.** In other words, you paint images using meainings.
+
+2. **Prompt separation.** Be bothered no more by unintentional content mixing when generating two or more objects at the same time!
+
+3. **Real-time image inpainting and editing.** Basically, you draw upon any uploaded photo or a piece of art you want.
+
+---
+
 ## 🤖 Install
 
 ```bash
@@ -142,6 +156,7 @@ The interface is summarized in the image below ⬇️:
 ## 🚩 **Updates**
 
 - 🏃 Project page and the detailed demo instruction coming very soon!
+- ✅ March 15, 2023: Added detailed instructions in this README for creators.
 - ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
 - ✅ March 13, 2023: Code release!
 
