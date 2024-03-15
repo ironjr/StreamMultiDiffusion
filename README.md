@@ -73,7 +73,7 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 
 We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
 This section is a summary of its contents.
-Although we expect everything to work fine, there may be unexpected bugs or misssed features in the implementation.
+Although we expect everything to work fine, there may be unexpected bugs or missed features in the implementation.
 We are always welcoming issues and pull requests from you to improve this project! 🤗
 
 
