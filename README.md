@@ -25,7 +25,7 @@
 </div>
 
 <p align="center">
-  <img src="./assets/figure_one.png" width=90%>
+  <img src="./assets/figure_one.png" width=100%>
 </p>
 
 tl;dr: StreamMultiDiffusion is a *real-time* *interactive* *multiple*-text-to-image generation from user-assigned *regional* text prompts.
