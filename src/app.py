@@ -126,7 +126,7 @@ streamer = StreamMultiDiffusion(
     width=opt.width,
     cfg_type="none",
     seed=opt.seed,
-    bootstrap_steps=0,
+    bootstrap_steps=1,
 )
 
 prompt_suggestions = [
