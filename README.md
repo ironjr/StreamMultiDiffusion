@@ -68,23 +68,25 @@ This section is a summary of its contents.
 Although we expect everything to work fine, there may be unexpected bugs or misssed features in the implementation.
 We are always welcoming issues and pull requests from you to improve this project! 🤗
 
-### What is _Semantic Palette_ Anyway?
 
-**Semantic palette** basically means that you paint things with semantics, i.e., text prompts, just like how you may use brush tools in commercial image editing software, such as Adobe Photoshop, etc.
-Our acceleration technique for region-based controlled image generation allows users to edit their prompt masks similarly to drawing.
-We couldn't find a good preexisting name for this type of user interface, so we named it as _semantic palette_, hoping for it to make sense to you. 😄
+### Basic Usage (GUI)
 
-### Demo Application Architecture
+| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
+| :----------------------------: | :----------------------------: |
+| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
 
-There are two types of transaction data between the front-end and the back-end (`model.streammultidiffusion_pipeline.StreamMultiDiffusion`) of the application: a (1) background image object and a (2) list of text prompt-mask pairs.
-We choose to call a pair of the latter as a _semantic brush_.
-Despite its fancy name, a _semantic brush_ is just a pair of a text prompt and a regional mask assigned to the prompt, possibly with additional mask-controlling parameters.
-Users interact with the application by registering and updating these two types of data to control the image generation stream.
-The interface is summarized in the image below ⬇️:
+1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
 
-<p align="center">
-  <img src="./assets/app_design.png" width=90%>
-</p>
+2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
+
+3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
+
+4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
+
+### Basic Usage (CLI)
+
+Coming Soon!
+
 
 ### User Interface (GUI)
 
@@ -102,7 +104,7 @@ The interface is summarized in the image below ⬇️:
 | 6 | Drawing tools | Using brushes and erasers to interactively edit the prompt masks. |
 | 7 | Play button | Switches between streaming/step-by-step mode. |
 | 8 | Display | Generated images are streamed through this component. |
-| 9 | Mask alpha control | Changes the mask alpha value before quantization. Controls local content blending, but extremely sensitive. Recommended: >0.95 |
+| 9 | Mask alpha control | Changes the mask alpha value before quantization. Controls local content blending (simply means that you can use nonbinary masks for fine-grained controls), but extremely sensitive. Recommended: >0.95 |
 | 10 | Mask blur std. dev. control | Changes the standard deviation of the quantized mask of the current semantic brush. Less sensitive than mask alpha control. |
 | 11 | Seed control | Changes the seed of the application. May not be needed, since we generate infinite stream of images. |
 | 12 | Prompt edit | User can interactively change the positive/negative prompts at need. |
@@ -113,14 +115,19 @@ The interface is summarized in the image below ⬇️:
 
 Coming Soon!
 
-### Basic Usage (GUI)
 
-Work in progress!
+### Demo Application Architecture
 
+There are two types of transaction data between the front-end and the back-end (`model.streammultidiffusion_pipeline.StreamMultiDiffusion`) of the application: a (1) background image object and a (2) list of text prompt-mask pairs.
+We choose to call a pair of the latter as a _semantic brush_.
+Despite its fancy name, a _semantic brush_ is just a pair of a text prompt and a regional mask assigned to the prompt, possibly with additional mask-controlling parameters.
+Users interact with the application by registering and updating these two types of data to control the image generation stream.
+The interface is summarized in the image below ⬇️:
 
-### Basic Usage (CLI)
+<p align="center">
+  <img src="./assets/app_design.png" width=90%>
+</p>
 
-Coming Soon!
 
 ---
 
@@ -129,6 +136,15 @@ Coming Soon!
 - 🏃 Project page and the detailed demo instruction coming very soon!
 - ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
 - ✅ March 13, 2023: Code release!
+
+
+## 🙋 FAQ
+
+### What is _Semantic Palette_ Anyway?
+
+**Semantic palette** basically means that you paint things with semantics, i.e., text prompts, just like how you may use brush tools in commercial image editing software, such as Adobe Photoshop, etc.
+Our acceleration technique for region-based controlled image generation allows users to edit their prompt masks similarly to drawing.
+We couldn't find a good preexisting name for this type of user interface, so we named it as _semantic palette_, hoping for it to make sense to you. 😄
 
 
 ## 🌏 Citation
