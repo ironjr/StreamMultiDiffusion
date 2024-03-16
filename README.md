@@ -1,5 +1,10 @@
 # 🦦🪄 StreamMultiDiffusion
 
+### 👷 Important Notice from the Authors
+
+Although the features are completely provided in the current version, this repository is under construction for more demo applications and user instructions! Please stay tuned!
+
+---
 
 <p align="center">
   <img src="./assets/demo.gif" width=90%>
@@ -45,6 +50,20 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
+## ⭐️ Features
+
+
+| ![usage1](./assets/feature1.gif) | ![usage2](./assets/feature3.gif) |  ![usage3](./assets/feature2.gif)  |
+| :----------------------------: | :----------------------------: | :----------------------------: |
+
+1. **Interactive image generation from scratch with fine-grained region control.** In other words, you paint images using meainings.
+
+2. **Prompt separation.** Be bothered no more by unintentional content mixing when generating two or more objects at the same time!
+
+3. **Real-time image inpainting and editing.** Basically, you draw upon any uploaded photo or a piece of art you want.
+
+---
+
 ## 🤖 Install
 
 ```bash
@@ -69,14 +88,6 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
 
 
-### More Detailed Instruction
-
-We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
-This section is a summary of its contents.
-Although we expect everything to work fine, there may be unexpected bugs or missed features in the implementation.
-We are always welcoming issues and pull requests from you to improve this project! 🤗
-
-
 ### Basic Usage (GUI)
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
@@ -94,6 +105,17 @@ We are always welcoming issues and pull requests from you to improve this projec
 ### Basic Usage (CLI)
 
 Coming Soon!
+
+
+---
+
+
+## 💼 Further Information
+
+We have provided detailed explanation of the application design and the expected usages in appendices of our [paper](https://arxiv.org/abs/2403.09055).
+This section is a summary of its contents.
+Although we expect everything to work fine, there may be unexpected bugs or missed features in the implementation.
+We are always welcoming issues and pull requests from you to improve this project! 🤗
 
 
 ### User Interface (GUI)
@@ -119,6 +141,7 @@ Coming Soon!
 | 13 | Prompt strength control | Prompt embedding mix ratio between the current & the background. Helps global content blending. Recommended: >0.75 |
 | 14 | Brush name edit | Adds convenience by changing the name of the brush. Does not affect the generation. Just for preference. |
 
+
 ### User Interface (CLI)
 
 Coming Soon!
@@ -142,6 +165,7 @@ The interface is summarized in the image below ⬇️:
 ## 🚩 **Updates**
 
 - 🏃 Project page and the detailed demo instruction coming very soon!
+- ✅ March 15, 2023: Added detailed instructions in this README for creators.
 - ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
 - ✅ March 13, 2023: Code release!
 
@@ -176,3 +200,13 @@ Our code is based on the projects: [StreamDiffusion](https://github.com/cumulo-a
 ## 📧 Contact
 
 If you have any questions, please email `jarin.lee@gmail.com`.
+
+## ⭐ Star History
+
+<a href="https://star-history.com/#ironjr/StreamMultiDiffusion&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date" />
+  </picture>
+</a>
