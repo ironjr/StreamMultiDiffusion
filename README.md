@@ -218,12 +218,15 @@ imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
 We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs.
 The first example is a simple example of generation 
 Notice that **our generation results also obeys strict prompt separation**.
-No mixing of brown boy with pink girl in a single image.
+
 
 **Result:**
 
 <p align="center">
   <img src="./assets/timessquare_generation_mask.png" width=100%>
+</p>
+<p align="center">
+    No more unwanted prompt mixing! Brown boy and pink girl generated simultaneously without a problem.
 </p>
 
 **Code:**
