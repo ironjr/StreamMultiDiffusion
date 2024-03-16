@@ -1,5 +1,10 @@
 # 🦦🪄 StreamMultiDiffusion
 
+### 👷 Important Notice from the Authors
+
+Although the features are completely provided in the current version, this repository is under construction for more demo applications and user instructions! Please stay tuned!
+
+---
 
 <p align="center">
   <img src="./assets/demo.gif" width=90%>
