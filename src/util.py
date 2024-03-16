@@ -182,8 +182,8 @@ def blend(
         bg = T.ToTensor()(bg)
     if not isinstance(mask, torch.Tensor):
         mask = (T.ToTensor()(mask) < 0.5).float()[:1]
-    if std > 0:
-        mask = gaussian_lowpass(mask[None], std)[0].clip_(0, 1)
+    if sum(std) > 0:
+        mask = gaussian_lowpass(mask[None], std + 1e-10)[0].clip_(0, 1)
     return T.ToPILImage()(fg * mask + bg * (1 - mask))
 
 
