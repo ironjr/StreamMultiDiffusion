@@ -90,21 +90,6 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
 
 
-### Basic Usage (GUI)
-
-| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
-| :----------------------------: | :----------------------------: |
-| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
-
-1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
-
-2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
-
-3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
-
-4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
-
-
 ### Basic Usage (Python)
 
 The main python modules in our project is two-fold: (1) [`model.StableMultiDiffusionPipeline`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/stablemultidiffusion_pipeline.py) for single-call generation (might be more preferable for CLI users), and (2) [`model.StreamMultiDiffusion`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/streammultidiffusion.py) for streaming application such as the [one](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/app.py) in the main figure of this README page.
@@ -546,6 +531,22 @@ smd = StableMultiDiffusionPipeline(device)
 image = smd.sample('A photo of the dolomites')
 image.save('my_creation.png')
 ```
+
+
+### Basic Usage (GUI)
+
+| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
+| :----------------------------: | :----------------------------: |
+| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
+
+1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
+
+2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
+
+3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
+
+4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
+
 
 
 ### Basic Usage (CLI)
