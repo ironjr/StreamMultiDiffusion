@@ -467,17 +467,18 @@ smd.update_single_layer(
 #     )
 
 # Or make a video/gif from your generation stream (requires `imageio`)
-with imageio.get_writer('my_beautiful_creation.gif', mode='I') as writer:
-    for _ in range(50):
-        image = smd()
-        writer.append_data(image)
+frames = []
+for _ in range(50):
+    image = smd()
+    frames.append(image)
+imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
 ```
 
 **Result:**
 
-<p align="left">
-  <img src="./assets/athena_stream.gif" width=40% loop>
-</p>
+| ![mask](./assets/zeus/prompt.png) | ![result](./assets/athena_stream.gif) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Stream |
 
 
 #### Panorama Generation
