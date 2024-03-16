@@ -66,7 +66,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
-## 🤖 Install
+## 🤖 Installation
 
 ```bash
 conda create -n smd python=3.10 && conda activate smd
@@ -90,285 +90,23 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
 
 
-### Basic Usage (GUI)
-
-| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
-| :----------------------------: | :----------------------------: |
-| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
-
-1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
-
-2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
-
-3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
-
-4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
-
-
 ### Basic Usage (Python)
 
 The main python modules in our project is two-fold: (1) [`model.StableMultiDiffusionPipeline`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/stablemultidiffusion_pipeline.py) for single-call generation (might be more preferable for CLI users), and (2) [`model.StreamMultiDiffusion`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/streammultidiffusion.py) for streaming application such as the [one](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/app.py) in the main figure of this README page.
 We provide minimal examples for the possible applications below.
 
 
-#### Region-Based Multi-Text-to-Image Generation
-
-We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs.
-The first example is a simple example of generation 
-Notice that our generation results also obeys prompt separation.
-
-```python
-import torch
-from model import StableMultiDiffusionPipeline
-from util import seed_everything
-
-# The following packages are imported only for loading the images.
-import torchvision.transforms as T
-import requests
-from functools import reduce
-from io import BytesIO
-from PIL import Image
-
-
-seed = 2024
-device = 0
-
-# Load the module.
-seed_everything(seed)
-device = torch.device(f'cuda:{device}')
-smd = StableMultiDiffusionPipeline(
-    device,
-    hf_key='ironjr/BlazingDriveV11m',
-    sd_version='1.5',
-)
-
-# Load prompts.
-prompts = [
-    # Background prompt.
-    '1girl, 1boy, times square',
-    # Foreground prompts.
-    '1boy, looking at viewer, brown hair, casual shirt',
-    '1girl, looking at viewer, pink hair, leather jacket',
-]
-negative_prompts = [
-    '',
-    '1girl', # (Optional) The first prompt is a boy so we don't want a girl.
-    '1boy', # (Optional) The first prompt is a girl so we don't want a boy.
-]
-negative_prompt_prefix = 'worst quality, bad quality, normal quality, cropped, framed'
-negative_prompts = [negative_prompt_prefix + ', ' + p for p in negative_prompts]
-
-# Load masks.
-masks = []
-for i in range(1, 3):
-    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/timessquare/timessquare_{i}.png'
-    response = requests.get(url)
-    mask = Image.open(BytesIO(response.content)).convert('RGBA')
-    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
-    masks.append(mask)
-# In this example, background is simply set as non-marked regions.
-background = reduce(torch.logical_and, [m == 0 for m in masks])
-masks = torch.stack([background] + masks, dim=0).float()
-
-height, width = masks.shape[-2:] # (768, 768) in this example.
-
-# Sample an image.
-image = smd(
-    prompts,
-    negative_prompts,
-    masks=masks,
-    mask_strengths=1,
-    mask_stds=0,
-    height=height,
-    width=width,
-    bootstrap_steps=2,
-)
-image.save('my_beautiful_creation.png')
-```
-
-**Result:**
-
-<p align="center">
-  <img src="./assets/timessquare_generation_mask.png" width=100%>
-</p>
-
-
-#### *Larger* Region-Based Multi-Text-to-Image Generation
-
-The below code reproduces the results in the [second video](https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7) of this README page.
-The original MultiDiffusion pipeline using 50 step DDIM sampler takes roughly an hour to run the code, but we have reduced in down to **a minute**.
-
-```python
-import torch
-from model import StableMultiDiffusionPipeline
-from util import seed_everything
-
-# The following packages are imported only for loading the images.
-import torchvision.transforms as T
-import requests
-from functools import reduce
-from io import BytesIO
-from PIL import Image
-
-
-seed = 2024
-device = 0
-
-# Load the module.
-seed_everything(seed)
-device = torch.device(f'cuda:{device}')
-smd = StableMultiDiffusionPipeline(device)
-
-# Load prompts.
-prompts = [
-    # Background prompt.
-    'clear deep blue sky',
-    # Foreground prompts.
-    'summer mountains',
-    'the sun',
-    'the moon',
-    'a giant waterfall',
-    'a giant waterfall',
-    'clean deep blue lake',
-    'a large tree',
-    'a large tree',
-]
-negative_prompts = ['worst quality, bad quality, normal quality, cropped, framed'] * len(prompts)
-
-# Load masks.
-masks = []
-for i in range(1, 9):
-    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/irworobongdo/irworobongdo_{i}.png'
-    response = requests.get(url)
-    mask = Image.open(BytesIO(response.content)).convert('RGBA')
-    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
-    masks.append(mask)
-# In this example, background is simply set as non-marked regions.
-background = reduce(torch.logical_and, [m == 0 for m in masks])
-masks = torch.stack([background] + masks, dim=0).float()
-
-height, width = masks.shape[-2:] # (768, 1920) in this example.
-
-# Sample an image.
-image = smd(
-    prompts,
-    negative_prompts,
-    masks=masks,
-    mask_strengths=1,
-    mask_stds=0,
-    height=height,
-    width=width,
-    bootstrap_steps=2,
-)
-image.save('my_beautiful_creation.png')
-```
-
-**Result:**
-
-<p align="center">
-  <img src="./assets/irworobongdo_generation.png" width=100%>
-</p>
-
-
-#### Image Inpainting with Prompt Separation
-
-Our pipeline also enables editing and inpainting existing images.
-We also support *any* SD 1.5 checkpoint models.
-One exceptional advantage of ours is that we provide an easy separation of prompt
-You can additionally trade-off between prompt separation and overall harmonization by changing the argument `bootstrap_steps` from 0 (full mixing) to 5 (full separation).
-We recommend `1-3`.
-The following code is a minimal example of performing prompt separated multi-prompt image inpainting using our pipeline on a custom model.
-
-```python
-import torch
-from model import StableMultiDiffusionPipeline
-from util import seed_everything
-
-# The following packages are imported only for loading the images.
-import torchvision.transforms as T
-import requests
-from io import BytesIO
-from PIL import Image
-
-
-seed = 2
-device = 0
-
-# Load the module.
-seed_everything(seed)
-device = torch.device(f'cuda:{device}')
-smd = StableMultiDiffusionPipeline(
-    device,
-    hf_key='ironjr/BlazingDriveV11m',
-    sd_version='1.5',
-)
-
-# Load the background image you want to start drawing.
-#   Although it works for any image, we recommend to use background that is generated
-#   or at least modified by the same checkpoint model (e.g., preparing it by passing
-#   it to the same checkpoint for an image-to-image pipeline with denoising_strength 0.2)
-#   for the maximally harmonized results!
-#   However, in this example, we choose to use a real-world image for the demo.
-url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/timessquare/timessquare.jpeg'
-response = requests.get(url)
-background_image = Image.open(BytesIO(response.content)).convert('RGB')
-
-# Load prompts and background prompts (explicitly).
-background_prompt = '1girl, 1boy, times square'
-prompts = [
-    # Foreground prompts.
-    '1boy, looking at viewer, brown hair, casual shirt',
-    '1girl, looking at viewer, pink hair, leather jacket',
-]
-negative_prompts = [
-    '1girl',
-    '1boy',
-]
-negative_prompt_prefix = 'worst quality, bad quality, normal quality, cropped, framed'
-negative_prompts = [negative_prompt_prefix + ', ' + p for p in negative_prompts]
-background_negative_prompt = negative_prompt_prefix
-
-# Load masks.
-masks = []
-for i in range(1, 3):
-    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/timessquare/timessquare_{i}.png'
-    response = requests.get(url)
-    mask = Image.open(BytesIO(response.content)).convert('RGBA')
-    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
-    masks.append(mask)
-masks = torch.stack(masks, dim=0).float()
-height, width = masks.shape[-2:] # (768, 768) in this example.
-
-# Sample an image.
-image = smd(
-    prompts,
-    negative_prompts,
-    masks=masks,
-    mask_strengths=1,
-    # Use larger standard deviation to harmonize the inpainting result (Recommended: 8-32)!
-    mask_stds=16.0,
-    height=height,
-    width=width,
-    bootstrap_steps=2,
-    bootstrap_leak_sensitivity=0.1,
-    # This is for providing the image input.
-    background=background_image,
-    background_prompt=background_prompt,
-    background_negative_prompt=background_negative_prompt,
-)
-image.save('my_beautiful_inpainting.png')
-```
-
-**Result:**
-
-<p align="center">
-  <img src="./assets/timessquare_inpainting_mask.png" width=100%>
-</p>
-
-
 #### Streaming Generation Process
 
 With [multi-prompt stream batch](https://arxiv.org/abs/2403.09055), our modification to the [original stream batch architecture](https://github.com/cumulo-autumn/StreamDiffusion) by [@cumulo_autumn](https://twitter.com/cumulo_autumn), we can stream this multi-prompt text-to-image generation process to generate images for ever.
+
+**Result:**
+
+| ![mask](./assets/zeus/prompt.png) | ![result](./assets/athena_stream.gif) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Stream |
+
+**Code:**
 
 ```python
 import torch
@@ -467,23 +205,293 @@ smd.update_single_layer(
 #     )
 
 # Or make a video/gif from your generation stream (requires `imageio`)
-with imageio.get_writer('my_beautiful_creation.gif', mode='I') as writer:
-    for _ in range(50):
-        image = smd()
-        writer.append_data(image)
+frames = []
+for _ in range(50):
+    image = smd()
+    frames.append(image)
+imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
 ```
+
+
+#### Region-Based Multi-Text-to-Image Generation
+
+We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs.
+The first example is a simple example of generation 
+Notice that **our generation results also obeys strict prompt separation**.
+
 
 **Result:**
 
-<p align="left">
-  <img src="./assets/athena_stream.gif" width=40% loop>
+<p align="center">
+  <img src="./assets/timessquare_generation_mask.png" width=100%>
 </p>
+<p align="center">
+    No more unwanted prompt mixing! Brown boy and pink girl generated simultaneously without a problem.
+</p>
+
+**Code:**
+
+```python
+import torch
+from model import StableMultiDiffusionPipeline
+from util import seed_everything
+
+# The following packages are imported only for loading the images.
+import torchvision.transforms as T
+import requests
+from functools import reduce
+from io import BytesIO
+from PIL import Image
+
+
+seed = 2024
+device = 0
+
+# Load the module.
+seed_everything(seed)
+device = torch.device(f'cuda:{device}')
+smd = StableMultiDiffusionPipeline(
+    device,
+    hf_key='ironjr/BlazingDriveV11m',
+    sd_version='1.5',
+)
+
+# Load prompts.
+prompts = [
+    # Background prompt.
+    '1girl, 1boy, times square',
+    # Foreground prompts.
+    '1boy, looking at viewer, brown hair, casual shirt',
+    '1girl, looking at viewer, pink hair, leather jacket',
+]
+negative_prompts = [
+    '',
+    '1girl', # (Optional) The first prompt is a boy so we don't want a girl.
+    '1boy', # (Optional) The first prompt is a girl so we don't want a boy.
+]
+negative_prompt_prefix = 'worst quality, bad quality, normal quality, cropped, framed'
+negative_prompts = [negative_prompt_prefix + ', ' + p for p in negative_prompts]
+
+# Load masks.
+masks = []
+for i in range(1, 3):
+    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/timessquare/timessquare_{i}.png'
+    response = requests.get(url)
+    mask = Image.open(BytesIO(response.content)).convert('RGBA')
+    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
+    masks.append(mask)
+# In this example, background is simply set as non-marked regions.
+background = reduce(torch.logical_and, [m == 0 for m in masks])
+masks = torch.stack([background] + masks, dim=0).float()
+
+height, width = masks.shape[-2:] # (768, 768) in this example.
+
+# Sample an image.
+image = smd(
+    prompts,
+    negative_prompts,
+    masks=masks,
+    mask_strengths=1,
+    mask_stds=0,
+    height=height,
+    width=width,
+    bootstrap_steps=2,
+)
+image.save('my_beautiful_creation.png')
+```
+
+
+#### *Larger* Region-Based Multi-Text-to-Image Generation
+
+The below code reproduces the results in the [second video](https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7) of this README page.
+The original MultiDiffusion pipeline using 50 step DDIM sampler takes roughly an hour to run the code, but we have reduced in down to **a minute**.
+
+**Result:**
+
+| ![mask](./assets/irworobongdo/irworobongdo_full.png) |
+| :----------------------------: |
+| Semantic Brush Input |
+|  ![result](./assets/irworobongdo_generation.png) |
+| Generated Image |
+
+**Code:**
+
+```python
+import torch
+from model import StableMultiDiffusionPipeline
+from util import seed_everything
+
+# The following packages are imported only for loading the images.
+import torchvision.transforms as T
+import requests
+from functools import reduce
+from io import BytesIO
+from PIL import Image
+
+
+seed = 2024
+device = 0
+
+# Load the module.
+seed_everything(seed)
+device = torch.device(f'cuda:{device}')
+smd = StableMultiDiffusionPipeline(device)
+
+# Load prompts.
+prompts = [
+    # Background prompt.
+    'clear deep blue sky',
+    # Foreground prompts.
+    'summer mountains',
+    'the sun',
+    'the moon',
+    'a giant waterfall',
+    'a giant waterfall',
+    'clean deep blue lake',
+    'a large tree',
+    'a large tree',
+]
+negative_prompts = ['worst quality, bad quality, normal quality, cropped, framed'] * len(prompts)
+
+# Load masks.
+masks = []
+for i in range(1, 9):
+    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/irworobongdo/irworobongdo_{i}.png'
+    response = requests.get(url)
+    mask = Image.open(BytesIO(response.content)).convert('RGBA')
+    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
+    masks.append(mask)
+# In this example, background is simply set as non-marked regions.
+background = reduce(torch.logical_and, [m == 0 for m in masks])
+masks = torch.stack([background] + masks, dim=0).float()
+
+height, width = masks.shape[-2:] # (768, 1920) in this example.
+
+# Sample an image.
+image = smd(
+    prompts,
+    negative_prompts,
+    masks=masks,
+    mask_strengths=1,
+    mask_stds=0,
+    height=height,
+    width=width,
+    bootstrap_steps=2,
+)
+image.save('my_beautiful_creation.png')
+```
+
+
+#### Image Inpainting with Prompt Separation
+
+Our pipeline also enables editing and inpainting existing images.
+We also support *any* SD 1.5 checkpoint models.
+One exceptional advantage of ours is that we provide an easy separation of prompt
+You can additionally trade-off between prompt separation and overall harmonization by changing the argument `bootstrap_steps` from 0 (full mixing) to 5 (full separation).
+We recommend `1-3`.
+The following code is a minimal example of performing prompt separated multi-prompt image inpainting using our pipeline on a custom model.
+
+**Result:**
+
+<p align="center">
+  <img src="./assets/timessquare_inpainting_mask.png" width=100%>
+</p>
+
+**Code:**
+
+```python
+import torch
+from model import StableMultiDiffusionPipeline
+from util import seed_everything
+
+# The following packages are imported only for loading the images.
+import torchvision.transforms as T
+import requests
+from io import BytesIO
+from PIL import Image
+
+
+seed = 2
+device = 0
+
+# Load the module.
+seed_everything(seed)
+device = torch.device(f'cuda:{device}')
+smd = StableMultiDiffusionPipeline(
+    device,
+    hf_key='ironjr/BlazingDriveV11m',
+    sd_version='1.5',
+)
+
+# Load the background image you want to start drawing.
+#   Although it works for any image, we recommend to use background that is generated
+#   or at least modified by the same checkpoint model (e.g., preparing it by passing
+#   it to the same checkpoint for an image-to-image pipeline with denoising_strength 0.2)
+#   for the maximally harmonized results!
+#   However, in this example, we choose to use a real-world image for the demo.
+url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/timessquare/timessquare.jpeg'
+response = requests.get(url)
+background_image = Image.open(BytesIO(response.content)).convert('RGB')
+
+# Load prompts and background prompts (explicitly).
+background_prompt = '1girl, 1boy, times square'
+prompts = [
+    # Foreground prompts.
+    '1boy, looking at viewer, brown hair, casual shirt',
+    '1girl, looking at viewer, pink hair, leather jacket',
+]
+negative_prompts = [
+    '1girl',
+    '1boy',
+]
+negative_prompt_prefix = 'worst quality, bad quality, normal quality, cropped, framed'
+negative_prompts = [negative_prompt_prefix + ', ' + p for p in negative_prompts]
+background_negative_prompt = negative_prompt_prefix
+
+# Load masks.
+masks = []
+for i in range(1, 3):
+    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/timessquare/timessquare_{i}.png'
+    response = requests.get(url)
+    mask = Image.open(BytesIO(response.content)).convert('RGBA')
+    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
+    masks.append(mask)
+masks = torch.stack(masks, dim=0).float()
+height, width = masks.shape[-2:] # (768, 768) in this example.
+
+# Sample an image.
+image = smd(
+    prompts,
+    negative_prompts,
+    masks=masks,
+    mask_strengths=1,
+    # Use larger standard deviation to harmonize the inpainting result (Recommended: 8-32)!
+    mask_stds=16.0,
+    height=height,
+    width=width,
+    bootstrap_steps=2,
+    bootstrap_leak_sensitivity=0.1,
+    # This is for providing the image input.
+    background=background_image,
+    background_prompt=background_prompt,
+    background_negative_prompt=background_negative_prompt,
+)
+image.save('my_beautiful_inpainting.png')
+```
 
 
 #### Panorama Generation
 
 Our [`model.StableMultiDiffusionPipeline`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/stablemultidiffusion_pipeline.py) supports x10 faster generation of irregularly large size images such as panoramas.
 For example, the following code runs in 10s with a single 2080 Ti GPU.
+
+**Result:**
+
+<p align="center">
+  <img src="./assets/panorama_generation.png" width=100%>
+</p>
+
+**Code:**
 
 ```python
 import torch
@@ -500,17 +508,18 @@ smd.sample_panorama('A photo of Alps', height=512, width=3072)
 image.save('my_panorama_creation.png')
 ```
 
-**Result:**
-
-<p align="center">
-  <img src="./assets/panorama_generation.png" width=100%>
-</p>
-
-
 #### Basic StableDiffusion
 
 We also support standard single-prompt single-tile sampling of StableDiffusion checkpoint for completeness.
 This behaves exactly the same as calling [`diffuser`](https://huggingface.co/docs/diffusers/en/index)'s [`StableDiffusionPipeline`](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py).
+
+**Result:**
+
+<p align="left">
+  <img src="./assets/dolomites_generation.png" width=50%>
+</p>
+
+**Code:**
 
 ```python
 import torch
@@ -527,11 +536,21 @@ image = smd.sample('A photo of the dolomites')
 image.save('my_creation.png')
 ```
 
-**Result:**
 
-<p align="left">
-  <img src="./assets/dolomites_generation.png" width=50%>
-</p>
+### Basic Usage (GUI)
+
+| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
+| :----------------------------: | :----------------------------: |
+| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
+
+1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
+
+2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
+
+3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
+
+4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
+
 
 
 ### Basic Usage (CLI)
@@ -572,12 +591,6 @@ We are always welcoming issues and pull requests from you to improve this projec
 | 12 | Prompt edit | User can interactively change the positive/negative prompts at need. |
 | 13 | Prompt strength control | Prompt embedding mix ratio between the current & the background. Helps global content blending. Recommended: >0.75 |
 | 14 | Brush name edit | Adds convenience by changing the name of the brush. Does not affect the generation. Just for preference. |
-
-
-### User Interface (CLI)
-
-Coming Soon!
-
 
 ### Demo Application Architecture
 
