@@ -34,7 +34,7 @@ from PIL import Image
 from util import gaussian_lowpass, blend, get_panorama_views, shift_to_mask_bbox_center
 
 
-class StableMultiDiffusion(nn.Module):
+class StableMultiDiffusionPipeline(nn.Module):
     def __init__(
         self,
         device: torch.device,
@@ -96,6 +96,12 @@ class StableMultiDiffusion(nn.Module):
                 where each mask covered by other masks is reduced in its alpha
                 value by this specified factor.
             t_index_list (List[int]): The default scheduling for LCM scheduler.
+            mask_type (Literal['discrete', 'semi-continuous', 'continuous']):
+                defines the mask quantization modes. Details in the codes of
+                `self.process_masks`. Basically, this (subtly) controls the
+                smoothness of foreground-background blending. More continuous
+                means more blending, but smaller generated patch depending on
+                the mask standard deviation.
         """
         super().__init__()
 
@@ -174,6 +180,39 @@ class StableMultiDiffusion(nn.Module):
         t_index_list: Optional[List[int]] = None,
         num_inference_steps: Optional[int] = None,
     ) -> None:
+        r"""Set up different inference schedule for the diffusion model.
+
+        You do not have to run this explicitly if you want to use the default
+        setting, but if you want other time schedules, run this function
+        between the module initialization and the main call.
+
+        Note:
+          - Recommended t_index_lists for LCMs:
+              - [0, 12, 25, 37]: Default schedule for 4 steps. Best for
+                  panorama. Not recommended if you want to use bootstrapping.
+                  Because bootstrapping stage affects the initial structuring
+                  of the generated image & in this four step LCM, this is done
+                  with only at the first step, the structure may be distorted.
+              - [0, 4, 12, 25, 37]: Recommended if you would use 1-step boot-
+                  strapping. Default initialization in this implementation.
+              - [0, 5, 16, 18, 20, 37]: Recommended if you would use 2-step
+                  bootstrapping.
+          - Due to the characteristic of SD1.5 LCM LoRA, setting
+            `num_inference_steps` larger than 20 may results in overly blurry
+            and unrealistic images. Beware!
+
+        Args:
+            t_index_list (Optional[List[int]]): The specified scheduling step
+                regarding the maximum timestep as `num_inference_steps`, which
+                is by default, 50. That means that
+                `t_index_list=[0, 12, 25, 37]` is a relative time indices basd
+                on the full scale of 50. If None, reinitialize the module with
+                the default value.
+            num_inference_steps (Optional[int]): The maximum timestep of the
+                sampler. Defines relative scale of the `t_index_list`. Rarely
+                used in practice. If None, reinitialize the module with the
+                default value.
+        """
         if t_index_list is None:
             t_index_list = self.default_t_list
         if num_inference_steps is None:
@@ -214,7 +253,17 @@ class StableMultiDiffusion(nn.Module):
         self.next_noise_lvs = torch.cat([noise_lvs[1:], noise_lvs.new_zeros(1)])[None, :, None, None, None]
 
     @torch.no_grad()
-    def get_text_embeds(self, prompt: str, negative_prompt: str) -> torch.Tensor:
+    def get_text_embeds(self, prompt: str, negative_prompt: str) -> Tuple[torch.Tensor]:
+        r"""Text embeddings from string text prompts.
+
+        Args: 
+            prompt (str): A text prompt string.
+            negative_prompt: An optional negative text prompt string. Good for
+                high-quality generation.
+
+        Returns:
+            A tuple of (negative, positive) prompt embeddings of (1, 77, 768).
+        """
         kwargs = dict(padding='max_length', max_length=self.tokenizer.model_max_length, return_tensors='pt')
     
         # Tokenize text and get embeddings.
@@ -222,21 +271,40 @@ class StableMultiDiffusion(nn.Module):
         text_embeds = self.text_encoder(text_input.input_ids.to(self.device))[0]
         uncond_input = self.tokenizer(negative_prompt, **kwargs)
         uncond_embeds = self.text_encoder(uncond_input.input_ids.to(self.device))[0]
-
-        # Final embedding is a concatenation.
-        # text_embeds = torch.cat([uncond_embeds, text_embeds])
         return uncond_embeds, text_embeds
 
     @torch.no_grad()
     def get_text_prompts(self, image: Image.Image) -> str:
+        r"""A convenient method to extract text prompt from an image.
+
+        This is called if the user does not provide background prompt but only
+        the background image. We use BLIP-2 to automatically generate prompts.
+
+        Args:
+            image (Image.Image): A PIL image.
+
+        Returns:
+            A single string of text prompt.
+        """
         question = 'Question: What are in the image? Answer:'
         inputs = self.i2t_processor(image, question, return_tensors='pt')
-        out = self.i2t_model.generate(**inputs)
+        out = self.i2t_model.generate(**inputs, max_new_tokens=77)
         prompt = self.i2t_processor.decode(out[0], skip_special_tokens=True).strip()
         return prompt
 
     @torch.no_grad()
     def encode_imgs(self, imgs: torch.Tensor, generator: Optional[torch.Generator] = None):
+        r"""A wrapper function for VAE encoder of the latent diffusion model.
+
+        Args:
+            imgs (torch.Tensor): An image to get StableDiffusion latents.
+                Expected shape: (B, 3, H, W). Expected pixel scale: [0, 1].
+            generator (Optional[torch.Generator]): Seed for KL-Autoencoder.
+
+        Returns:
+            An image latent embedding with 1/8 size (depending on the auto-
+            encoder. Shape: (B, 4, H//8, W//8).
+        """
         def _retrieve_latents(
             encoder_output: torch.Tensor,
             generator: Optional[torch.Generator] = None,
@@ -257,6 +325,16 @@ class StableMultiDiffusion(nn.Module):
 
     @torch.no_grad()
     def decode_latents(self, latents: torch.Tensor) -> torch.Tensor:
+        r"""A wrapper function for VAE decoder of the latent diffusion model.
+
+        Args:
+            latents (torch.Tensor): An image latent to get associated images.
+                Expected shape: (B, 4, H//8, W//8).
+
+        Returns:
+            An image latent embedding with 1/8 size (depending on the auto-
+            encoder. Shape: (B, 3, H, W).
+        """
         latents = 1 / self.vae.config.scaling_factor * latents
         imgs = self.vae.decode(latents).sample
         imgs = (imgs / 2 + 0.5).clip_(0, 1)
@@ -264,6 +342,22 @@ class StableMultiDiffusion(nn.Module):
 
     @torch.no_grad()
     def get_white_background(self, height: int, width: int) -> torch.Tensor:
+        r"""White background image latent for bootstrapping or in case of
+        absent background.
+
+        Additionally stores the maximally-sized white latent for fast retrieval
+        in the future. By default, we initially call this with 768x768 sized
+        white image, so the function is rarely visited twice.
+
+        Args:
+            height (int): The height of the white *image*, not its latent.
+            width (int): The width of the white *image*, not its latent.
+
+        Returns:
+            A white image latent of size (1, 4, height//8, width//8). A cropped
+            version of the stored white latent is returned if the requested
+            size is smaller than what we already have created.
+        """
         if not hasattr(self, 'white') or self.white.shape[-2] < height or self.white.shape[-1] < width:
             white = torch.ones(1, 3, height, width, dtype=self.dtype, device=self.device)
             self.white = self.encode_imgs(white)
@@ -282,6 +376,78 @@ class StableMultiDiffusion(nn.Module):
         timesteps: Optional[torch.Tensor] = None,
         preprocess_mask_cover_alpha: Optional[float] = None,
     ) -> Tuple[torch.Tensor]:
+        r"""Fast preprocess of masks for region-based generation with fine-
+        grained controls.
+
+        Mask preprocessing is done in four steps:
+         1. Resizing: Resize the masks into the specified width and height by
+            nearest neighbor interpolation.
+         2. (Optional) Ordering: Masks with higher indices are considered to
+            cover the masks with smaller indices. Covered masks are decayed
+            in its alpha value by the specified factor of
+            `preprocess_mask_cover_alpha`.
+         3. Blurring: Gaussian blur is applied to the mask with the specified
+            standard deviation (isotropic). This results in gradual increase of
+            masked region as the timesteps evolve, naturally blending fore-
+            ground and the predesignated background. Not strictly required if
+            you want to produce images from scratch withoout background.
+         4. Quantization: Split the real-numbered masks of value between [0, 1]
+            into predefined noise levels for each quantized scheduling step of
+            the diffusion sampler. For example, if the diffusion model sampler
+            has noise level of [0.9977, 0.9912, 0.9735, 0.8499, 0.5840], which
+            is the default noise level of this module with schedule [0, 4, 12,
+            25, 37], the masks are split into binary masks whose values are
+            greater than these levels. This results in tradual increase of mask
+            region as the timesteps increase. Details are described in our
+            paper at https://arxiv.org/pdf/2403.09055.pdf.
+
+        On the Three Modes of `mask_type`:
+            `self.mask_type` is predefined at the initialization stage of this
+            pipeline. Three possible modes are available: 'discrete', 'semi-
+            continuous', and 'continuous'. These define the mask quantization
+            modes we use. Basically, this (subtly) controls the smoothness of
+            foreground-background blending. Continuous modes produces nonbinary
+            masks to further blend foreground and background latents by linear-
+            ly interpolating between them. Semi-continuous masks only applies
+            continuous mask at the last step of the LCM sampler. Due to the
+            large step size of the LCM scheduler, we find that our continuous
+            blending helps generating seamless inpainting and editing results.
+
+        Args:
+            masks (Union[torch.Tensor, Image.Image, List[Image.Image]]): Masks.
+            strength (Optional[Union[torch.Tensor, float]]): Mask strength that
+                overrides the default value. A globally multiplied factor to
+                the mask at the initial stage of processing. Can be applied
+                seperately for each mask.
+            std (Optional[Union[torch.Tensor, float]]): Mask blurring Gaussian
+                kernel's standard deviation. Overrides the default value. Can
+                be applied seperately for each mask.
+            height (int): The height of the expected generation. Mask is
+                resized to (height//8, width//8) with nearest neighbor inter-
+                polation.
+            width (int): The width of the expected generation. Mask is resized
+                to (height//8, width//8) with nearest neighbor interpolation.
+            use_boolean_mask (bool): Specify this to treat the mask image as
+                a boolean tensor. The retion with dark part darker than 0.5 of
+                the maximal pixel value (that is, 127.5) is considered as the
+                designated mask.
+            timesteps (Optional[torch.Tensor]): Defines the scheduler noise
+                levels that acts as bins of mask quantization.
+            preprocess_mask_cover_alpha (Optional[float]): Optional pre-
+                processing where each mask covered by other masks is reduced in
+                its alpha value by this specified factor. Overrides the default
+                value.
+
+        Returns: A tuple of tensors.
+          - masks: Preprocessed (ordered, blurred, and quantized) binary/non-
+                binary masks (see the explanation on `mask_type` above) for
+                region-based image synthesis.
+          - masks_blurred: Gaussian blurred masks. Used for optionally
+                specified foreground-background blending after image
+                generation.
+          - std: Mask blur standard deviation. Used for optionally specified
+                foreground-background blending after image generation.
+        """
         if isinstance(masks, Image.Image):
             masks = [masks]
         if isinstance(masks, (tuple, list)):
@@ -377,15 +543,45 @@ class StableMultiDiffusion(nn.Module):
         idx: int,
         latent: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Denoise-only step for reverse diffusion scheduler.
+        
+        Designed to match the interface of the original `pipe.scheduler.step`,
+        which is a combination of this method and the following
+        `scheduler_add_noise`.
+
+        Args:
+            noise_pred (torch.Tensor): Noise prediction results from the U-Net.
+            idx (int): Instead of timesteps (in [0, 1000]-scale) use indices
+                for the timesteps tensor (ranged in [0, len(timesteps)-1]).
+            latent (torch.Tensor): Noisy latent.
+
+        Returns:
+            A denoised tensor with the same size as latent.
+        """
         F_theta = (latent - self.beta_prod_t_sqrt[idx] * noise_pred) / self.alpha_prod_t_sqrt[idx]
         return self.c_out[idx] * F_theta + self.c_skip[idx] * latent
 
     def scheduler_add_noise(
         self,
         latent: torch.Tensor,
-        noise: torch.Tensor,
+        noise: Optional[torch.Tensor],
         idx: int,
     ) -> torch.Tensor:
+        r"""Separated noise-add step for the reverse diffusion scheduler.
+        
+        Designed to match the interface of the original
+        `pipe.scheduler.add_noise`.
+
+        Args:
+            latent (torch.Tensor): Denoised latent.
+            noise (torch.Tensor): Added noise. Can be None. If None, a random
+                noise is newly sampled for addition.
+            idx (int): Instead of timesteps (in [0, 1000]-scale) use indices
+                for the timesteps tensor (ranged in [0, len(timesteps)-1]).
+
+        Returns:
+            A noisy tensor with the same size as latent.
+        """
         if idx >= len(self.alpha_prod_t_sqrt) or idx < 0:
             # The last step does not require noise addition.
             return latent
@@ -404,6 +600,12 @@ class StableMultiDiffusion(nn.Module):
         batch_size: int = 1,
     ) -> Image.Image:
         r"""StableDiffusionPipeline for single-prompt single-tile generation.
+
+        Minimal Example:
+            >>> device = torch.device('cuda:0')
+            >>> smd = StableMultiDiffusionPipeline(device)
+            >>> image = smd.sample('A photo of the dolomites')
+            >>> image.save('my_creation.png')
 
         Args:
             prompts (Union[str, List[str]]): A text prompt.
@@ -464,6 +666,13 @@ class StableMultiDiffusion(nn.Module):
         tile_size: Optional[int] = None,
     ) -> Image.Image:
         r"""Large size image generation from a single set of prompts.
+
+        Minimal Example:
+            >>> device = torch.device('cuda:0')
+            >>> smd = StableMultiDiffusionPipeline(device)
+            >>> image = smd.sample_panorama(
+            >>>     'A photo of Alps', height=512, width=3072)
+            >>> image.save('my_panorama_creation.png')
 
         Args:
             prompts (Union[str, List[str]]): A text prompt.
@@ -574,6 +783,16 @@ class StableMultiDiffusion(nn.Module):
         text prompt-mask pairs.
 
         This is a main routine for this pipeline.
+
+        Example:
+            >>> device = torch.device('cuda:0')
+            >>> smd = StableMultiDiffusionPipeline(device)
+            >>> prompts = {... specify prompts}
+            >>> masks = {... specify mask tensors}
+            >>> height, width = masks.shape[-2:]
+            >>> image = smd(
+            >>>     prompts, masks=masks.float(), height=height, width=width)
+            >>> image.save('my_beautiful_creation.png')
 
         Args:
             prompts (Union[str, List[str]]): A text prompt.
