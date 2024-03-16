@@ -111,6 +111,123 @@ The main python modules in our project is two-fold: (1) [`model.StableMultiDiffu
 We provide minimal examples for the possible applications below.
 
 
+#### Streaming Generation Process
+
+With [multi-prompt stream batch](https://arxiv.org/abs/2403.09055), our modification to the [original stream batch architecture](https://github.com/cumulo-autumn/StreamDiffusion) by [@cumulo_autumn](https://twitter.com/cumulo_autumn), we can stream this multi-prompt text-to-image generation process to generate images for ever.
+
+**Result:**
+
+| ![mask](./assets/zeus/prompt.png) | ![result](./assets/athena_stream.gif) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Stream |
+
+**Code:**
+
+```python
+import torch
+from util import seed_everything, Streamer
+from model import StreamMultiDiffusion
+
+# The following packages are imported only for loading the images.
+import torchvision.transforms as T
+import requests
+import time
+import imageio # This is not included in our requirements.txt!
+from functools import reduce
+from io import BytesIO
+from PIL import Image
+
+
+seed = 2024
+device = 0
+height = 768
+width = 512
+
+# Load the module.
+device = torch.device(f'cuda:{device}')
+smd = StreamMultiDiffusion(
+    device,
+    hf_key='ironjr/BlazingDriveV11m',
+    sd_version='1.5',
+    height=height,
+    width=width,
+    cfg_type='none',
+    autoflush=True,
+    use_tiny_vae=True,
+    mask_type='continuous',
+    bootstrap_steps=2,
+    bootstrap_mix_steps=1.5,
+    seed=seed,
+)
+
+# Load the masks.
+masks = []
+for i in range(1, 3):
+    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/zeus/prompt_p{i}.png'
+    response = requests.get(url)
+    mask = Image.open(BytesIO(response.content)).convert('RGBA')
+    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
+    masks.append(mask)
+# In this example, background is simply set as non-marked regions.
+background = reduce(torch.logical_and, [m == 0 for m in masks])
+
+# Register a background, prompts, and masks (this can be called multiple times).
+smd.update_background(Image.new(size=(width, height), mode='RGB', color=(255, 255, 255)))
+smd.update_single_layer(
+    idx=0,
+    prompt='a photo of Mount Olympus',
+    negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
+    mask=background,
+    mask_strength=1.0,
+    mask_std=0.0,
+    prompt_strength=1.0,
+)
+smd.update_single_layer(
+    idx=1,
+    prompt='1girl, looking at viewer, lifts arm, smile, happy, Greek goddess Athena',
+    negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
+    mask=masks[0],
+    mask_strength=1.0,
+    mask_std=0.0,
+    prompt_strength=1.0,
+)
+smd.update_single_layer(
+    idx=2,
+    prompt='a small, sitting owl',
+    negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
+    mask=masks[1],
+    mask_strength=1.0,
+    mask_std=0.0,
+    prompt_strength=1.0,
+)
+
+
+# Generate images... forever.
+# while True:
+#     image = smd()
+#     image.save(f'{str(int(time.time() % 100000))}.png') # This will take up your hard drive pretty much soon.
+#     display(image) # If `from IPython.display import display` is called.
+#
+#     You can also intercept the process in the middle of the generation by updating other background, prompts or masks.
+#     smd.update_single_layer(
+#         idx=2,
+#         prompt='a small, sitting owl',
+#         negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
+#         mask=masks[1],
+#         mask_strength=1.0,
+#         mask_std=0.0,
+#         prompt_strength=1.0,
+#     )
+
+# Or make a video/gif from your generation stream (requires `imageio`)
+frames = []
+for _ in range(50):
+    image = smd()
+    frames.append(image)
+imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
+```
+
+
 #### Region-Based Multi-Text-to-Image Generation
 
 We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs.
@@ -369,123 +486,6 @@ image = smd(
     background_negative_prompt=background_negative_prompt,
 )
 image.save('my_beautiful_inpainting.png')
-```
-
-
-#### Streaming Generation Process
-
-With [multi-prompt stream batch](https://arxiv.org/abs/2403.09055), our modification to the [original stream batch architecture](https://github.com/cumulo-autumn/StreamDiffusion) by [@cumulo_autumn](https://twitter.com/cumulo_autumn), we can stream this multi-prompt text-to-image generation process to generate images for ever.
-
-**Result:**
-
-| ![mask](./assets/zeus/prompt.png) | ![result](./assets/athena_stream.gif) |
-| :----------------------------: | :----------------------------: |
-| Semantic Brush Input | Generated Stream |
-
-**Code:**
-
-```python
-import torch
-from util import seed_everything, Streamer
-from model import StreamMultiDiffusion
-
-# The following packages are imported only for loading the images.
-import torchvision.transforms as T
-import requests
-import time
-import imageio # This is not included in our requirements.txt!
-from functools import reduce
-from io import BytesIO
-from PIL import Image
-
-
-seed = 2024
-device = 0
-height = 768
-width = 512
-
-# Load the module.
-device = torch.device(f'cuda:{device}')
-smd = StreamMultiDiffusion(
-    device,
-    hf_key='ironjr/BlazingDriveV11m',
-    sd_version='1.5',
-    height=height,
-    width=width,
-    cfg_type='none',
-    autoflush=True,
-    use_tiny_vae=True,
-    mask_type='continuous',
-    bootstrap_steps=2,
-    bootstrap_mix_steps=1.5,
-    seed=seed,
-)
-
-# Load the masks.
-masks = []
-for i in range(1, 3):
-    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/zeus/prompt_p{i}.png'
-    response = requests.get(url)
-    mask = Image.open(BytesIO(response.content)).convert('RGBA')
-    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
-    masks.append(mask)
-# In this example, background is simply set as non-marked regions.
-background = reduce(torch.logical_and, [m == 0 for m in masks])
-
-# Register a background, prompts, and masks (this can be called multiple times).
-smd.update_background(Image.new(size=(width, height), mode='RGB', color=(255, 255, 255)))
-smd.update_single_layer(
-    idx=0,
-    prompt='a photo of Mount Olympus',
-    negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
-    mask=background,
-    mask_strength=1.0,
-    mask_std=0.0,
-    prompt_strength=1.0,
-)
-smd.update_single_layer(
-    idx=1,
-    prompt='1girl, looking at viewer, lifts arm, smile, happy, Greek goddess Athena',
-    negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
-    mask=masks[0],
-    mask_strength=1.0,
-    mask_std=0.0,
-    prompt_strength=1.0,
-)
-smd.update_single_layer(
-    idx=2,
-    prompt='a small, sitting owl',
-    negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
-    mask=masks[1],
-    mask_strength=1.0,
-    mask_std=0.0,
-    prompt_strength=1.0,
-)
-
-
-# Generate images... forever.
-# while True:
-#     image = smd()
-#     image.save(f'{str(int(time.time() % 100000))}.png') # This will take up your hard drive pretty much soon.
-#     display(image) # If `from IPython.display import display` is called.
-#
-#     You can also intercept the process in the middle of the generation by updating other background, prompts or masks.
-#     smd.update_single_layer(
-#         idx=2,
-#         prompt='a small, sitting owl',
-#         negative_prompt='worst quality, bad quality, normal quality, cropped, framed',
-#         mask=masks[1],
-#         mask_strength=1.0,
-#         mask_std=0.0,
-#         prompt_strength=1.0,
-#     )
-
-# Or make a video/gif from your generation stream (requires `imageio`)
-frames = []
-for _ in range(50):
-    image = smd()
-    frames.append(image)
-imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
 ```
 
 
