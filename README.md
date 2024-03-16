@@ -552,7 +552,9 @@ image.save('my_creation.png')
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
 | :----------------------------: | :----------------------------: |
+| Upoad a background image | Type some text prompts |
 | ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
+| Draw | Press the play button and enjoy 🤩 |
 
 1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
 
@@ -560,7 +562,7 @@ image.save('my_creation.png')
 
 3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
 
-4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
+4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
 
 
 
