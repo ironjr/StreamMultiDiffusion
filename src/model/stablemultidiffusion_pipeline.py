@@ -98,7 +98,7 @@ class StableMultiDiffusionPipeline(nn.Module):
             t_index_list (List[int]): The default scheduling for LCM scheduler.
             mask_type (Literal['discrete', 'semi-continuous', 'continuous']):
                 defines the mask quantization modes. Details in the codes of
-                `self.process_masks`. Basically, this (subtly) controls the
+                `self.process_mask`. Basically, this (subtly) controls the
                 smoothness of foreground-background blending. More continuous
                 means more blending, but smaller generated patch depending on
                 the mask standard deviation.
@@ -122,25 +122,20 @@ class StableMultiDiffusionPipeline(nn.Module):
         print(f'[INFO] Loading Stable Diffusion...')
         variant = None
         lora_weight_name = None
-        if hf_key is not None:
-            print(f'[INFO] Using Hugging Face custom model key: {hf_key}')
-            model_key = hf_key
+        if self.sd_version == '1.5':
+            if hf_key is not None:
+                print(f'[INFO] Using Hugging Face custom model key: {hf_key}')
+                model_key = hf_key
+            else:
+                model_key = 'runwayml/stable-diffusion-v1-5'
+                variant = 'fp16'
+            lora_key = 'latent-consistency/lcm-lora-sdv1-5'
+            lora_weight_name = 'pytorch_lora_weights.safetensors'
         # elif self.sd_version == 'xl':
         #     model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
         #     lora_key = 'latent-consistency/lcm-lora-sdxl'
         #     variant = 'fp16'
         #     lora_weight_name = 'pytorch_lora_weights.safetensors'
-        elif self.sd_version == '2.1':
-            model_key = 'stabilityai/stable-diffusion-2-1-base'
-            variant = 'fp16'
-        elif self.sd_version == '2.0':
-            model_key = 'stabilityai/stable-diffusion-2-base'
-            variant = 'fp16'
-        elif self.sd_version == '1.5':
-            model_key = 'runwayml/stable-diffusion-v1-5'
-            lora_key = 'latent-consistency/lcm-lora-sdv1-5'
-            variant = 'fp16'
-            lora_weight_name = 'pytorch_lora_weights.safetensors'
         else:
             raise ValueError(f'Stable Diffusion version {self.sd_version} not supported.')
 
