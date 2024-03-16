@@ -319,9 +319,11 @@ The original MultiDiffusion pipeline using 50 step DDIM sampler takes roughly an
 
 **Result:**
 
-<p align="center">
-  <img src="./assets/irworobongdo_generation.png" width=100%>
-</p>
+| ![mask](./assets/irworobongdo/irworobongdo_full.png) |
+| :----------------------------: |
+| Semantic Brush Input |
+|  ![result](./assets/irworobongdo_generation.png) |
+| Generated Image |
 
 **Code:**
 
