@@ -476,7 +476,7 @@ with imageio.get_writer('my_beautiful_creation.gif', mode='I') as writer:
 **Result:**
 
 <p align="left">
-  <img src="./assets/athena_stream.gif" width=40%>
+  <img src="./assets/athena_stream.gif" width=40% loop>
 </p>
 
 
