@@ -1089,7 +1089,7 @@ class StableMultiDiffusionPipeline(nn.Module):
         image = self.decode_latents(latent.to(dtype=self.dtype))[0]
         if has_background and do_blend:
             fg_mask = torch.sum(masks_g, dim=0).clip_(0, 1)
-            image = blend(image, background[0], fg_mask, std)
+            image = blend(image, background[0], fg_mask)
         else:
             image = T.ToPILImage()(image)
         return image

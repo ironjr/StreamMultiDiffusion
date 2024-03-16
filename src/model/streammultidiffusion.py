@@ -32,7 +32,7 @@ from collections import deque
 from typing import Tuple, List, Literal, Optional, Union
 from PIL import Image
 
-from util import gaussian_lowpass, blend, shift_to_mask_bbox_center
+from util import gaussian_lowpass, shift_to_mask_bbox_center
 from data import BackgroundObject, LayerObject, BackgroundState #, LayerState
 
 
