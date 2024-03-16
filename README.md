@@ -66,7 +66,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
-## 🤖 Install
+## 🤖 Installation
 
 ```bash
 conda create -n smd python=3.10 && conda activate smd
