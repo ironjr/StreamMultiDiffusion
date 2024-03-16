@@ -49,9 +49,54 @@ class StableMultiDiffusion(nn.Module):
         default_bootstrap_steps: int = 1,
         default_boostrap_mix_steps: float = 1.0,
         default_bootstrap_leak_sensitivity: float = 0.2,
+        default_preprocess_mask_cover_alpha: float = 0.3,
         t_index_list: List[int] = [0, 4, 12, 25, 37], # [0, 5, 16, 18, 20, 37], # [0, 12, 25, 37], # Magic number.
         mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'discrete',
     ) -> None:
+        r"""Stabilized MultiDiffusion for fast sampling.
+
+        Accelrated region-based text-to-image synthesis with Latent Consistency
+        Model while preserving mask fidelity and quality.
+
+        Args:
+            device (torch.device): Specify CUDA device.
+            dtype (torch.dtype): Default precision used in the sampling
+                process. By default, it is FP16.
+            sd_version (Literal['1.5', '2.0', '2.1', 'xl']): StableDiffusion
+                version. Currently, only 1.5 is supported.
+            hf_key (Optional[str]): Custom StableDiffusion checkpoint for
+                stylized generation.
+            lora_key (Optional[str]): Custom LCM LoRA for acceleration.
+            load_from_local (bool): Turn on if you have already downloaed LoRA 
+                & Hugging Face hub is down.
+            default_mask_std (float): Preprocess mask with Gaussian blur with
+                specified standard deviation.
+            default_mask_strength (float): Preprocess mask by multiplying it
+                globally with the specified variable. Caution: extremely
+                sensitive. Recommended range: 0.98-1.
+            default_prompt_strength (float): Preprocess foreground prompts
+                globally by linearly interpolating its embedding with the
+                background prompt embeddint with specified mix ratio. Useful
+                control handle for foreground blending. Recommended range:
+                0.5-1.
+            default_bootstrap_steps (int): Bootstrapping stage steps to
+                encourage region separation. Recommended range: 1-3.
+            default_boostrap_mix_steps (float): Bootstrapping background is a
+                linear interpolation between background latent and the white
+                image latent. This handle controls the mix ratio. Available
+                range: 0-(number of bootstrapping inference steps). For
+                example, 2.3 means that for the first two steps, white image
+                is used as a bootstrapping background and in the third step,
+                mixture of white (0.3) and registered background (0.7) is used
+                as a bootstrapping background.
+            default_bootstrap_leak_sensitivity (float): Postprocessing at each
+                inference step by masking away the remaining bootstrap
+                backgrounds t Recommended range: 0-1.
+            default_preprocess_mask_cover_alpha (float): Optional preprocessing
+                where each mask covered by other masks is reduced in its alpha
+                value by this specified factor.
+            t_index_list (List[int]): The default scheduling for LCM scheduler.
+        """
         super().__init__()
 
         self.device = device
@@ -65,6 +110,7 @@ class StableMultiDiffusion(nn.Module):
         self.default_bootstrap_steps = default_bootstrap_steps
         self.default_boostrap_mix_steps = default_boostrap_mix_steps
         self.default_bootstrap_leak_sensitivity = default_bootstrap_leak_sensitivity
+        self.default_preprocess_mask_cover_alpha = default_preprocess_mask_cover_alpha
         self.mask_type = mask_type
 
         print(f'[INFO] Loading Stable Diffusion...')
@@ -234,6 +280,7 @@ class StableMultiDiffusion(nn.Module):
         width: int = 512,
         use_boolean_mask: bool = True,
         timesteps: Optional[torch.Tensor] = None,
+        preprocess_mask_cover_alpha: Optional[float] = None,
     ) -> Tuple[torch.Tensor]:
         if isinstance(masks, Image.Image):
             masks = [masks]
@@ -248,6 +295,20 @@ class StableMultiDiffusion(nn.Module):
         masks = F.interpolate(masks.float(), size=(height, width), mode='bilinear', align_corners=False)
         masks = masks.to(self.device)
 
+        # Background mask alpha is decayed by the specified factor where foreground masks covers it.
+        if preprocess_mask_cover_alpha is None:
+            preprocess_mask_cover_alpha = self.default_preprocess_mask_cover_alpha
+        if preprocess_mask_cover_alpha > 0:
+            masks = torch.stack([
+                torch.where(
+                    masks[i + 1:].sum(dim=0) > 0,
+                    mask * preprocess_mask_cover_alpha,
+                    mask,
+                ) if i < len(masks) - 1 else mask
+                for i, mask in enumerate(masks)
+            ], dim=0)
+
+        # Scheduler noise levels for mask quantization.
         if timesteps is None:
             noise_lvs = self.noise_lvs
             next_noise_lvs = self.next_noise_lvs
@@ -256,6 +317,7 @@ class StableMultiDiffusion(nn.Module):
             noise_lvs = noise_lvs_[None, :, None, None, None]
             next_noise_lvs = torch.cat([noise_lvs_[1:], noise_lvs_.new_zeros(1)])[None, :, None, None, None]
 
+        # Mask preprocessing parameters are fetched from the default settings.
         if std is None:
             std = self.default_mask_std
         if isinstance(std, (int, float)):
@@ -280,6 +342,7 @@ class StableMultiDiffusion(nn.Module):
         masks = masks * strength[:, None, None, None]
         masks = masks.unsqueeze(1).repeat(1, noise_lvs.shape[1], 1, 1, 1)
 
+        # Mask is quantized according to the current noise levels specified by the scheduler.
         if self.mask_type == 'discrete':
             # Discrete mode.
             masks = masks > noise_lvs
@@ -340,6 +403,21 @@ class StableMultiDiffusion(nn.Module):
         guidance_scale: Optional[float] = None,
         batch_size: int = 1,
     ) -> Image.Image:
+        r"""StableDiffusionPipeline for single-prompt single-tile generation.
+
+        Args:
+            prompts (Union[str, List[str]]): A text prompt.
+            negative_prompts (Union[str, List[str]]): A negative text prompt.
+            height (int): Height of a generated image.
+            width (int): Width of a generated image.
+            num_inference_steps (Optional[int]): Number of inference steps.
+                Default inference scheduling is used if none is specified.
+            guidance_scale (Optional[float]): Classifier guidance scale.
+                Default value is used if none is specified.
+            batch_size (int): Number of images to generate.
+
+        Returns: A PIL.Image image.
+        """
         if num_inference_steps is None:
             num_inference_steps = self.default_num_inference_steps
         if guidance_scale is None:
@@ -383,8 +461,27 @@ class StableMultiDiffusion(nn.Module):
         width: int = 2048,
         num_inference_steps: Optional[int] = None,
         guidance_scale: Optional[float] = None,
-        window_size: Optional[int] = None,
+        tile_size: Optional[int] = None,
     ) -> Image.Image:
+        r"""Large size image generation from a single set of prompts.
+
+        Args:
+            prompts (Union[str, List[str]]): A text prompt.
+            negative_prompts (Union[str, List[str]]): A negative text prompt.
+            height (int): Height of a generated image. It is tiled if larger
+                than `tile_size`.
+            width (int): Width of a generated image. It is tiled if larger
+                than `tile_size`.
+            num_inference_steps (Optional[int]): Number of inference steps.
+                Default inference scheduling is used if none is specified.
+            guidance_scale (Optional[float]): Classifier guidance scale.
+                Default value is used if none is specified.
+            tile_size (Optional[int]): Tile size of the panorama generation.
+                Works best with the default training size of the Stable-
+                Diffusion model, i.e., 512 or 768 for SD1.5 and 1024 for SDXL.
+
+        Returns: A PIL.Image image of a panorama (large-size) image.
+        """
         if num_inference_steps is None:
             num_inference_steps = self.default_num_inference_steps
             self.scheduler.set_timesteps(num_inference_steps)
@@ -411,9 +508,9 @@ class StableMultiDiffusion(nn.Module):
         w = width // self.vae_scale_factor
         latent = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
 
-        if window_size is None:
-            window_size = min(min(height, width), 512)
-        views, masks = get_panorama_views(h, w, window_size // self.vae_scale_factor)
+        if tile_size is None:
+            tile_size = min(min(height, width), 512)
+        views, masks = get_panorama_views(h, w, tile_size // self.vae_scale_factor)
         masks = masks.to(dtype=self.dtype, device=self.device)
         value = torch.zeros_like(latent)
         with torch.autocast('cuda'):
@@ -471,7 +568,89 @@ class StableMultiDiffusion(nn.Module):
         bootstrap_steps: Optional[int] = None,
         boostrap_mix_steps: Optional[float] = None,
         bootstrap_leak_sensitivity: Optional[float] = None,
+        preprocess_mask_cover_alpha: Optional[float] = None,
     ) -> Image.Image:
+        r"""Arbitrary-size image generation from multiple pairs of (regional)
+        text prompt-mask pairs.
+
+        This is a main routine for this pipeline.
+
+        Args:
+            prompts (Union[str, List[str]]): A text prompt.
+            negative_prompts (Union[str, List[str]]): A negative text prompt.
+            suffix (Optional[str]): One option for blending foreground prompts
+                with background prompts by simply appending background prompt
+                to the end of each foreground prompt with this `middle word` in
+                between. For example, if you set this as `, background is`,
+                then the foreground prompt will be changed into
+                `(fg), background is (bg)` before conditional generation.
+            background (Optional[Union[torch.Tensor, Image.Image]]): a
+                background image, if the user wants to draw in front of the
+                specified image. Background prompt will automatically generated
+                with a BLIP-2 model.
+            background_prompt (Optional[str]): The background prompt is used
+                for preprocessing foreground prompt embeddings to blend
+                foreground and background.
+            background_negative_prompt (Optional[str]): The negative background
+                prompt.
+            height (int): Height of a generated image. It is tiled if larger
+                than `tile_size`.
+            width (int): Width of a generated image. It is tiled if larger
+                than `tile_size`.
+            num_inference_steps (Optional[int]): Number of inference steps.
+                Default inference scheduling is used if none is specified.
+            guidance_scale (Optional[float]): Classifier guidance scale.
+                Default value is used if none is specified.
+            prompt_strength (float): Overrides default value. Preprocess
+                foreground prompts globally by linearly interpolating its
+                embedding with the background prompt embeddint with specified
+                mix ratio. Useful control handle for foreground blending.
+                Recommended range: 0.5-1.
+            masks (Optional[Union[Image.Image, List[Image.Image]]]): a list of
+                mask images. Each mask associates with each of the text prompts
+                and each of the negative prompts. If specified as an image, it
+                regards the image as a boolean mask. Also accepts torch.Tensor
+                masks, which can have nonbinary values for fine-grained
+                controls in mixing regional generations.
+            mask_strengths (Optional[Union[torch.Tensor, float, List[float]]]):
+                Overrides the default value. an be assigned for each mask
+                separately. Preprocess mask by multiplying it globally with the
+                specified variable. Caution: extremely sensitive. Recommended
+                range: 0.98-1.
+            mask_stds (Optional[Union[torch.Tensor, float, List[float]]]):
+                Overrides the default value. Can be assigned for each mask
+                separately. Preprocess mask with Gaussian blur with specified
+                standard deviation. Recommended range: 0-64.
+            use_boolean_mask (bool): Turn this off if you want to treat the
+                mask image as nonbinary one. The module will use the last
+                channel of the given image in `masks` as the mask value.
+            do_blend (bool): Blend the generated foreground and the optionally
+                predefined background by smooth boundary obtained from Gaussian
+                blurs of the foreground `masks` with the given `mask_stds`.
+            tile_size (Optional[int]): Tile size of the panorama generation.
+                Works best with the default training size of the Stable-
+                Diffusion model, i.e., 512 or 768 for SD1.5 and 1024 for SDXL.
+            bootstrap_steps (int): Overrides the default value. Bootstrapping
+                stage steps to encourage region separation. Recommended range:
+                1-3.
+            boostrap_mix_steps (float): Overrides the default value.
+                Bootstrapping background is a linear interpolation between
+                background latent and the white image latent. This handle
+                controls the mix ratio. Available range: 0-(number of
+                bootstrapping inference steps). For example, 2.3 means that for
+                the first two steps, white image is used as a bootstrapping
+                background and in the third step, mixture of white (0.3) and
+                registered background (0.7) is used as a bootstrapping
+                background.
+            bootstrap_leak_sensitivity (float): Overrides the default value.
+                Postprocessing at each inference step by masking away the
+                remaining bootstrap backgrounds t Recommended range: 0-1.
+            preprocess_mask_cover_alpha (float): Overrides the default value.
+                Optional preprocessing where each mask covered by other masks
+                is reduced in its alpha value by this specified factor.
+
+        Returns: A PIL.Image image of a panorama (large-size) image.
+        """
 
         ### Simplest cases
 
@@ -525,6 +704,7 @@ class StableMultiDiffusion(nn.Module):
             width=width,
             use_boolean_mask=use_boolean_mask,
             timesteps=self.timesteps,
+            preprocess_mask_cover_alpha=preprocess_mask_cover_alpha,
         )  # (p, t, 1, H, W)
         bg_masks = (1 - fg_masks.sum(dim=0)).clip_(0, 1)  # (T, 1, h, w)
         has_background = bg_masks.sum() > 0
