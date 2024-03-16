@@ -117,6 +117,14 @@ We support arbitrary-sized image generation from arbitrary number of prompt-mask
 The first example is a simple example of generation 
 Notice that our generation results also obeys prompt separation.
 
+**Result:**
+
+<p align="center">
+  <img src="./assets/timessquare_generation_mask.png" width=100%>
+</p>
+
+**Code:**
+
 ```python
 import torch
 from model import StableMultiDiffusionPipeline
@@ -186,17 +194,19 @@ image = smd(
 image.save('my_beautiful_creation.png')
 ```
 
-**Result:**
-
-<p align="center">
-  <img src="./assets/timessquare_generation_mask.png" width=100%>
-</p>
-
 
 #### *Larger* Region-Based Multi-Text-to-Image Generation
 
 The below code reproduces the results in the [second video](https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7) of this README page.
 The original MultiDiffusion pipeline using 50 step DDIM sampler takes roughly an hour to run the code, but we have reduced in down to **a minute**.
+
+**Result:**
+
+<p align="center">
+  <img src="./assets/irworobongdo_generation.png" width=100%>
+</p>
+
+**Code:**
 
 ```python
 import torch
@@ -263,12 +273,6 @@ image = smd(
 image.save('my_beautiful_creation.png')
 ```
 
-**Result:**
-
-<p align="center">
-  <img src="./assets/irworobongdo_generation.png" width=100%>
-</p>
-
 
 #### Image Inpainting with Prompt Separation
 
@@ -278,6 +282,14 @@ One exceptional advantage of ours is that we provide an easy separation of promp
 You can additionally trade-off between prompt separation and overall harmonization by changing the argument `bootstrap_steps` from 0 (full mixing) to 5 (full separation).
 We recommend `1-3`.
 The following code is a minimal example of performing prompt separated multi-prompt image inpainting using our pipeline on a custom model.
+
+**Result:**
+
+<p align="center">
+  <img src="./assets/timessquare_inpainting_mask.png" width=100%>
+</p>
+
+**Code:**
 
 ```python
 import torch
@@ -359,16 +371,18 @@ image = smd(
 image.save('my_beautiful_inpainting.png')
 ```
 
-**Result:**
-
-<p align="center">
-  <img src="./assets/timessquare_inpainting_mask.png" width=100%>
-</p>
-
 
 #### Streaming Generation Process
 
 With [multi-prompt stream batch](https://arxiv.org/abs/2403.09055), our modification to the [original stream batch architecture](https://github.com/cumulo-autumn/StreamDiffusion) by [@cumulo_autumn](https://twitter.com/cumulo_autumn), we can stream this multi-prompt text-to-image generation process to generate images for ever.
+
+**Result:**
+
+| ![mask](./assets/zeus/prompt.png) | ![result](./assets/athena_stream.gif) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Stream |
+
+**Code:**
 
 ```python
 import torch
@@ -474,17 +488,19 @@ for _ in range(50):
 imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
 ```
 
-**Result:**
-
-| ![mask](./assets/zeus/prompt.png) | ![result](./assets/athena_stream.gif) |
-| :----------------------------: | :----------------------------: |
-| Semantic Brush Input | Generated Stream |
-
 
 #### Panorama Generation
 
 Our [`model.StableMultiDiffusionPipeline`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/stablemultidiffusion_pipeline.py) supports x10 faster generation of irregularly large size images such as panoramas.
 For example, the following code runs in 10s with a single 2080 Ti GPU.
+
+**Result:**
+
+<p align="center">
+  <img src="./assets/panorama_generation.png" width=100%>
+</p>
+
+**Code:**
 
 ```python
 import torch
@@ -501,17 +517,18 @@ smd.sample_panorama('A photo of Alps', height=512, width=3072)
 image.save('my_panorama_creation.png')
 ```
 
-**Result:**
-
-<p align="center">
-  <img src="./assets/panorama_generation.png" width=100%>
-</p>
-
-
 #### Basic StableDiffusion
 
 We also support standard single-prompt single-tile sampling of StableDiffusion checkpoint for completeness.
 This behaves exactly the same as calling [`diffuser`](https://huggingface.co/docs/diffusers/en/index)'s [`StableDiffusionPipeline`](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py).
+
+**Result:**
+
+<p align="left">
+  <img src="./assets/dolomites_generation.png" width=50%>
+</p>
+
+**Code:**
 
 ```python
 import torch
@@ -527,12 +544,6 @@ smd = StableMultiDiffusionPipeline(device)
 image = smd.sample('A photo of the dolomites')
 image.save('my_creation.png')
 ```
-
-**Result:**
-
-<p align="left">
-  <img src="./assets/dolomites_generation.png" width=50%>
-</p>
 
 
 ### Basic Usage (CLI)
@@ -573,12 +584,6 @@ We are always welcoming issues and pull requests from you to improve this projec
 | 12 | Prompt edit | User can interactively change the positive/negative prompts at need. |
 | 13 | Prompt strength control | Prompt embedding mix ratio between the current & the background. Helps global content blending. Recommended: >0.75 |
 | 14 | Brush name edit | Adds convenience by changing the name of the brush. Does not affect the generation. Just for preference. |
-
-
-### User Interface (CLI)
-
-Coming Soon!
-
 
 ### Demo Application Architecture
 
