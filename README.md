@@ -614,7 +614,7 @@ The interface is summarized in the image below ⬇️:
 
 ## 🚩 **Updates**
 
-- 🏃 Project page and the detailed demo instruction coming very soon!
+- 🏃 Working on project page and public demo
 - ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
 - ✅ March 15, 2023: Added detailed instructions in this README for creators.
 - ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
@@ -636,7 +636,7 @@ Please cite us if you find our project useful!
 
 ```latex
 @article{lee2024streammultidiffusion,
-    title={StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control},
+    title={{StreamMultiDiffusion:} Real-Time Interactive Generation with Region-Based Semantic Control},
     author={Lee, Jaerin and Jung, Daniel Sungho and Lee, Kanggeon and Lee, Kyoung Mu},
     journal={arXiv preprint arXiv:2403.09055},
     year={2024}
