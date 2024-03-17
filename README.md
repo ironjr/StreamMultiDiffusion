@@ -5,8 +5,11 @@
 </p>
 
 
-## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
-> ##### Authors: [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
+<div align="center">
+<h2><a href="https://arxiv.org/abs/2403.09055">StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control</a></h2>
+
+[**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
+</div>
 
 <p align="center">
     <img src="assets/logo_cvlab.png" height=60>
