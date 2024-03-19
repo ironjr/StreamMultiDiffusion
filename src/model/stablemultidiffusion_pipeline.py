@@ -19,7 +19,7 @@
 # SOFTWARE.
 
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
-from diffusers import DiffusionPipeline, LCMScheduler, DDIMScheduler
+from diffusers import DiffusionPipeline, LCMScheduler, DDIMScheduler, AutoencoderTiny
 
 import torch
 import torch.nn as nn
@@ -288,13 +288,20 @@ class StableMultiDiffusionPipeline(nn.Module):
         return prompt
 
     @torch.no_grad()
-    def encode_imgs(self, imgs: torch.Tensor, generator: Optional[torch.Generator] = None):
+    def encode_imgs(
+        self,
+        imgs: torch.Tensor,
+        generator: Optional[torch.Generator] = None,
+        vae: Optional[nn.Module] = None,
+    ) -> torch.Tensor:
         r"""A wrapper function for VAE encoder of the latent diffusion model.
 
         Args:
             imgs (torch.Tensor): An image to get StableDiffusion latents.
                 Expected shape: (B, 3, H, W). Expected pixel scale: [0, 1].
             generator (Optional[torch.Generator]): Seed for KL-Autoencoder.
+            vae (Optional[nn.Module]): Explicitly specify VAE (used for
+                the demo application with TinyVAE).
 
         Returns:
             An image latent embedding with 1/8 size (depending on the auto-
@@ -314,24 +321,28 @@ class StableMultiDiffusionPipeline(nn.Module):
             else:
                 raise AttributeError('Could not access latents of provided encoder_output')
 
+        vae = self.vae if vae is None else vae
         imgs = 2 * imgs - 1
-        latents = self.vae.config.scaling_factor * _retrieve_latents(self.vae.encode(imgs), generator=generator)
+        latents = vae.config.scaling_factor * _retrieve_latents(vae.encode(imgs), generator=generator)
         return latents
 
     @torch.no_grad()
-    def decode_latents(self, latents: torch.Tensor) -> torch.Tensor:
+    def decode_latents(self, latents: torch.Tensor, vae: Optional[nn.Module] = None) -> torch.Tensor:
         r"""A wrapper function for VAE decoder of the latent diffusion model.
 
         Args:
             latents (torch.Tensor): An image latent to get associated images.
                 Expected shape: (B, 4, H//8, W//8).
+            vae (Optional[nn.Module]): Explicitly specify VAE (used for
+                the demo application with TinyVAE).
 
         Returns:
             An image latent embedding with 1/8 size (depending on the auto-
             encoder. Shape: (B, 3, H, W).
         """
-        latents = 1 / self.vae.config.scaling_factor * latents
-        imgs = self.vae.decode(latents).sample
+        vae = self.vae if vae is None else vae
+        latents = 1 / vae.config.scaling_factor * latents
+        imgs = vae.decode(latents).sample
         imgs = (imgs / 2 + 0.5).clip_(0, 1)
         return imgs
 

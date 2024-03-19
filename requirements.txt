@@ -5,9 +5,9 @@ einops
 diffusers
 transformers
 huggingface_hub[torch]
-gradio
 Pillow
 emoji
 numpy
 tqdm
 jupyterlab
+gradio
