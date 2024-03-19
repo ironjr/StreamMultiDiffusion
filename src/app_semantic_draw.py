@@ -22,6 +22,9 @@ import argparse
 import random
 import time
 import json
+import os
+import glob
+import pathlib
 from functools import partial
 from pprint import pprint
 
@@ -29,6 +32,7 @@ import numpy as np
 from PIL import Image
 import torch
 
+import spaces
 import gradio as gr
 from huggingface_hub import snapshot_download
 
@@ -68,7 +72,7 @@ parser.add_argument('-H', '--height', type=int, default=768)
 parser.add_argument('-W', '--width', type=int, default=1920)
 parser.add_argument('--model', type=str, default=None)
 parser.add_argument('--bootstrap_steps', type=int, default=1)
-parser.add_argument('--seed', type=int, default=2024)
+parser.add_argument('--seed', type=int, default=-1)
 parser.add_argument('--device', type=int, default=0)
 parser.add_argument('--port', type=int, default=8000)
 opt = parser.parse_args()
@@ -81,8 +85,9 @@ device = f'cuda:{opt.device}' if opt.device >= 0 else 'cpu'
 
 model_dict = {
     'Blazing Drive V11m': 'ironjr/BlazingDriveV11m',
-#     'Real Cartoon Pixar V5': 'ironjr/RealCartoon-PixarV5',
-#     'Kohaku V2.1': 'KBlueLeaf/kohaku-v2.1',
+    # 'Real Cartoon Pixar V5': 'ironjr/RealCartoon-PixarV5',
+    # 'Kohaku V2.1': 'KBlueLeaf/kohaku-v2.1',
+    # 'Realistic Vision V5.1': 'ironjr/RealisticVisionV5-1',
     # 'Stable Diffusion V1.5': 'runwayml/stable-diffusion-v1-5',
 }
 
@@ -106,7 +111,6 @@ opt.default_negative_prompt = (
     'nsfw, worst quality, bad quality, normal quality, cropped, framed'
 )
 opt.verbose = True
-opt.background_button_name = '🌄 Background'
 opt.colors = [
     '#000000',
     '#2692F3',
@@ -133,7 +137,7 @@ def add_palette(state):
         return [state] + [
             gr.update() if state.active_palettes != opt.max_palettes else gr.update(visible=False)
         ] + [
-            gr.update() if i != state.active_palettes - 1 else gr.update(visible=True)
+            gr.update() if i != state.active_palettes - 1 else gr.update(value=state.prompt_names[i + 1], visible=True)
             for i in range(opt.max_palettes)
         ]
     else:
@@ -253,13 +257,37 @@ def select_model(state, model_id):
     return state
 
 
-### Scheduler deamon
+def import_state(state, json_text):
+    current_palette = state.current_palette
+    # active_palettes = state.active_palettes
+    state = argparse.Namespace(**json.loads(json_text))
+    state.active_palettes = opt.max_palettes
+    return [state] + [
+        gr.update(value=v, visible=True) for v in state.prompt_names
+    ] + [
+        state.model_id,
+        state.prompts[current_palette],
+        state.prompt_names[current_palette],
+        state.neg_prompts[current_palette],
+        state.prompt_strengths[current_palette - 1],
+        state.mask_strengths[current_palette - 1],
+        state.mask_stds[current_palette - 1],
+        state.seed,
+    ]
+
+
+### Main worker
+
+@spaces.GPU
+def generate(state, *args, **kwargs):
+    return models[state.model_id](*args, **kwargs)
+
+
 
 def run(state, drawpad):
-    seed_everything(state.seed)
+    seed_everything(state.seed if state.seed >=0 else np.random.randint(2147483647))
     print('Generate!')
 
-    model = models[state.model_id]
     background = drawpad['background'].convert('RGBA')
     inpainting_mode = np.asarray(background).sum() != 0
     print('Inpainting mode: ', inpainting_mode)
@@ -273,29 +301,41 @@ def run(state, drawpad):
         for s in opt.colors[1:]
     ]) # (N, 3)
     masks = (palette[:, None, None, :] == user_input[None]).all(dim=-1)[:, None, ...] # (N, 1, H, W)
+    has_masks = [i for i, m in enumerate(masks.sum(dim=(1, 2, 3)) == 0) if not m]
+    print('Has mask: ', has_masks)
     masks = masks * foreground_mask
+    masks = masks[has_masks]
+
+    # if inpainting_mode:
+    #     prompts = state.prompts[1:len(masks)+1]
+    #     negative_prompts = state.neg_prompts[1:len(masks)+1]
+    #     mask_strengths = state.mask_strengths[:len(masks)]
+    #     mask_stds = state.mask_stds[:len(masks)]
+    #     prompt_strengths = state.prompt_strengths[:len(masks)]
+    # else:
+    #     masks = torch.cat([torch.ones_like(foreground_mask), masks], dim=0)
+    #     prompts = state.prompts[:len(masks)+1]
+    #     negative_prompts = state.neg_prompts[:len(masks)+1]
+    #     mask_strengths = [1] + state.mask_strengths[:len(masks)]
+    #     mask_stds = [0] + [state.mask_stds[:len(masks)]
+    #     prompt_strengths = [1] + state.prompt_strengths[:len(masks)]
 
     if inpainting_mode:
-        prompts = state.prompts[1:len(masks)+1]
-        negative_prompts = state.neg_prompts[1:len(masks)+1]
-        mask_strengths = state.mask_strengths[:len(masks)]
-        mask_stds = state.mask_stds[:len(masks)]
-        prompt_strengths = state.prompt_strengths[:len(masks)]
+        prompts = [state.prompts[v + 1] for v in has_masks]
+        negative_prompts = [state.neg_prompts[v + 1] for v in has_masks]
+        mask_strengths = [state.mask_strengths[v] for v in has_masks]
+        mask_stds = [state.mask_stds[v] for v in has_masks]
+        prompt_strengths = [state.prompt_strengths[v] for v in has_masks]
     else:
         masks = torch.cat([torch.ones_like(foreground_mask), masks], dim=0)
-        prompts = state.prompts[:len(masks)+1]
-        negative_prompts = state.neg_prompts[:len(masks)+1]
-        mask_strengths = [1] + state.mask_strengths[:len(masks)]
-        mask_stds = [0] + state.mask_stds[:len(masks)]
-        prompt_strengths = [1] + state.prompt_strengths[:len(masks)]
+        prompts = [state.prompts[0]] + [state.prompts[v + 1] for v in has_masks]
+        negative_prompts = [state.neg_prompts[0]] + [state.neg_prompts[v + 1] for v in has_masks]
+        mask_strengths = [1] + [state.mask_strengths[v] for v in has_masks]
+        mask_stds = [0] + [state.mask_stds[v] for v in has_masks]
+        prompt_strengths = [1] + [state.prompt_strengths[v] for v in has_masks]
 
-    # masks = [
-    #     Image.fromarray(np.repeat(255 - np.asarray(layer)[..., -1:], 3, axis=-1))
-    #     for i, layer in enumerate(drawpad['layers'])
-    #     if i < opt.max_palettes
-    # ]
-
-    return model(
+    return generate(
+        state,
         prompts,
         negative_prompts,
         masks=masks,
@@ -309,6 +349,34 @@ def run(state, drawpad):
         width=opt.width,
         bootstrap_steps=2,
     )
+
+
+
+### Load examples
+
+
+root = pathlib.Path(__file__).parent
+example_root = os.path.join(root, 'examples')
+example_images = glob.glob(os.path.join(example_root, '*.png'))
+example_images = [Image.open(i) for i in example_images]
+
+with open(os.path.join(example_root, 'prompt_background_advanced.txt')) as f:
+    prompts_background = [l.strip() for l in f.readlines() if l.strip() != '']
+
+with open(os.path.join(example_root, 'prompt_girl.txt')) as f:
+    prompts_girl = [l.strip() for l in f.readlines() if l.strip() != '']
+
+with open(os.path.join(example_root, 'prompt_boy.txt')) as f:
+    prompts_boy = [l.strip() for l in f.readlines() if l.strip() != '']
+
+with open(os.path.join(example_root, 'prompt_props.txt')) as f:
+    prompts_props = [l.strip() for l in f.readlines() if l.strip() != '']
+    prompts_props = {l.split(',')[0].strip(): ','.join(l.split(',')[1:]).strip() for l in prompts_props}
+
+prompt_background = lambda: random.choice(prompts_background)
+prompt_girl = lambda: random.choice(prompts_girl)
+prompt_boy = lambda: random.choice(prompts_boy)
+prompt_props = lambda: np.random.choice(list(prompts_props.keys()), size=(opt.max_palettes - 2), replace=False).tolist()
 
 
 ### Main application
@@ -371,41 +439,57 @@ for i in range(opt.max_palettes + 1):
 with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
 
     iface = argparse.Namespace()
-    state = argparse.Namespace()
 
-    # Cursor.
-    state.current_palette = 0 # 0: Background; 1,2,3,...: Layers
-    state.model_id = list(model_dict.keys())[0]
+    def _define_state():
+        state = argparse.Namespace()
 
-    # State variables (one-hot).
-    state.has_background = False
-    state.active_palettes = 1
-    state.is_streaming = False
+        # Cursor.
+        state.current_palette = 0 # 0: Background; 1,2,3,...: Layers
+        state.model_id = list(model_dict.keys())[0]
 
-    # Front-end initialized to the default values.
-    state.prompt_names = [
-        opt.background_button_name,
-        '👧 Girl',
-        '👦 Boy',
-        '🐶 Dog',
-        '🚗 Car',
-        '💐 Garden',
-    ] + ['🎨 New Palette' for _ in range(opt.max_palettes - 5)]
-    state.prompts = [
-        'Maximalism, best quality, high quality, city lights, times square',
-        '1girl, looking at viewer, pink hair, leather jacket',
-        '1boy, looking at viewer, brown hair, casual shirt',
-        'Doggy body part',
-        'Car',
-        'Flower garden',
-    ] + ['' for _ in range(opt.max_palettes - 5)]
-    state.neg_prompts = [opt.default_negative_prompt for _ in range(opt.max_palettes + 1)]
-    state.prompt_strengths = [opt.default_prompt_strength for _ in range(opt.max_palettes)]
-    state.mask_strengths = [opt.default_mask_strength for _ in range(opt.max_palettes)]
-    state.mask_stds = [opt.default_mask_std for _ in range(opt.max_palettes)]
-    state.seed = opt.seed
+        # State variables (one-hot).
+        state.active_palettes = 1
 
-    state = gr.State(state)
+        # Front-end initialized to the default values.
+        prompt_props_ = prompt_props()
+        # state.prompt_names = [
+        #     '🌄 Background',
+        #     '👧 Girl',
+        #     '👦 Boy',
+        #     '🐶 Dog',
+        #     '🚗 Car',
+        #     '💐 Garden',
+        # ] + ['🎨 New Palette' for _ in range(opt.max_palettes - 5)]
+        # state.prompts = [
+        #     'Maximalism, best quality, high quality, city lights, times square',
+        #     '1girl, looking at viewer, pink hair, leather jacket',
+        #     '1boy, looking at viewer, brown hair, casual shirt',
+        #     'Doggy body part',
+        #     'Car',
+        #     'Flower garden',
+        # ] + ['' for _ in range(opt.max_palettes - 5)]
+        state.prompt_names = [
+            '🌄 Background',
+            '👧 Girl',
+            '👦 Boy',
+        ] + prompt_props_ + ['🎨 New Palette' for _ in range(opt.max_palettes - 5)]
+        state.prompts = [
+            prompt_background(),
+            prompt_girl(),
+            prompt_boy(),
+        ] + [prompts_props[k] for k in prompt_props_] + ['' for _ in range(opt.max_palettes - 5)]
+        state.neg_prompts = [
+            opt.default_negative_prompt
+            + (', humans, humans, humans' if i == 0 else '')
+            for i in range(opt.max_palettes + 1)
+        ]
+        state.prompt_strengths = [opt.default_prompt_strength for _ in range(opt.max_palettes)]
+        state.mask_strengths = [opt.default_mask_strength for _ in range(opt.max_palettes)]
+        state.mask_stds = [opt.default_mask_std for _ in range(opt.max_palettes)]
+        state.seed = opt.seed
+        return state
+
+    state = gr.State(value=_define_state)
 
 
     ### Demo user interface
@@ -462,6 +546,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             label='Generated Result',
             elem_id='output-screen',
             show_share_button=True,
+            value=lambda: random.choice(example_images),
         )
 
     with gr.Row():
@@ -501,11 +586,8 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             with gr.Accordion(label='Import/Export Semantic Palette', open=False):
                 iface.tbox_state_import = gr.Textbox(label='Put Palette JSON Here To Import')
                 iface.json_state_export = gr.JSON(label='Exported Palette')
-                iface.btn_export_state = gr.Button("Export Palette ➡️ JSON")
-                iface.btn_import_state = gr.Button("Import JSON ➡️ Palette")
-
-                iface.btn_import_state.click(lambda x: argparse.Namespace(**json.loads(x)), iface.tbox_state_import, state)
-                iface.btn_export_state.click(lambda x: vars(x), state, iface.json_state_export)
+                iface.btn_export_state = gr.Button("Export Palette ➡️ JSON", variant='primary')
+                iface.btn_import_state = gr.Button("Import JSON ➡️ Palette", variant='secondary')
 
             gr.HTML(
                 """
@@ -581,7 +663,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
                         label='Edit Prompt for Background',
                         info='What do you want to draw?',
                         value=state.value.prompts[0],
-                        # placeholder=random.choice(prompt_suggestions),
+                        placeholder=lambda: random.choice(prompt_suggestions),
                         scale=2,
                     )
 
@@ -589,7 +671,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
                         label='Edit Brush Name',
                         info='Just for your convenience.',
                         value=state.value.prompt_names[0],
-                        # placeholder='🌄 Background',
+                        placeholder='🌄 Background',
                         scale=1,
                     )
 
@@ -630,7 +712,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
                     iface.slider_seed = gr.Slider(
                         label='Seed',
                         info='The global seed.',
-                        minimum=1,
+                        minimum=-1,
                         maximum=2147483647,
                         step=1,
                         value=opt.seed,
@@ -717,6 +799,20 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
         outputs=state,
         api_name='model_select',
     )
+
+    iface.btn_export_state.click(lambda x: vars(x), state, iface.json_state_export)
+    iface.btn_import_state.click(import_state, [state, iface.tbox_state_import], [
+        state,
+        *iface.btn_semantics,
+        iface.model_select,
+        iface.tbox_prompt,
+        iface.tbox_name,
+        iface.tbox_neg_prompt,
+        iface.slider_strength,
+        iface.slider_alpha,
+        iface.slider_std,
+        iface.slider_seed,
+    ])
 
 
 if __name__ == '__main__':
