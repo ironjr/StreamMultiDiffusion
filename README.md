@@ -1,33 +1,29 @@
-# 🦦🪄 StreamMultiDiffusion
-
-### 👷 Important Notice from the Authors
-
-🚨 News! We have added example codes below for ease of use.
-
-Although the features are completely provided in the current version, this repository is under construction for more demo applications and user instructions! Please stay tuned!
-
----
+<div align="center">
+<h1>
+🦦🦦 StreamMultiDiffusion 🦦🦦
+</h1>
 
 <p align="center">
   <img src="./assets/demo.gif" width=90%>
 </p>
 
 
-## [StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control](https://arxiv.org/abs/2403.09055)
-> ##### Authors: [Jaerin Lee](http://jaerinlee.com/), [Daniel Sungho Jung](https://dqj5182.github.io/), [Kanggeon Lee](https://github.com/dlrkdrjs97/), and [Kyoung Mu Lee](https://cv.snu.ac.kr/index.php/~kmlee/)
+<h2><a href="https://arxiv.org/abs/2403.09055">StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</a></h2>
+
+[**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
+
 
 <p align="center">
     <img src="assets/logo_cvlab.png" height=60>
 </p>
 
 
-<div align="center">
-
-[![Project](https://img.shields.io/badge/Project-Page-green)](https://jaerinlee.com/research/streammultidiffusion/)
+[![Project](https://img.shields.io/badge/Project-Page-green)](https://jaerinlee.com/research/streammultidiffusion)
 [![ArXiv](https://img.shields.io/badge/Arxiv-2403.09055-red)](https://arxiv.org/abs/2403.09055)
 [![Github](https://img.shields.io/github/stars/ironjr/StreamMultiDiffusion)](https://github.com/ironjr/StreamMultiDiffusion)
 [![X](https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_)](https://twitter.com/_ironjr_)
 [![LICENSE](https://img.shields.io/badge/license-MIT-lightgrey)](https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE)
+[![HFPaper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow)](https://huggingface.co/papers/2403.09055)
 
 </div>
 
@@ -96,7 +92,7 @@ The main python modules in our project is two-fold: (1) [`model.StableMultiDiffu
 We provide minimal examples for the possible applications below.
 
 
-#### Streaming Generation Process
+### Streaming Generation Process
 
 With [multi-prompt stream batch](https://arxiv.org/abs/2403.09055), our modification to the [original stream batch architecture](https://github.com/cumulo-autumn/StreamDiffusion) by [@cumulo_autumn](https://twitter.com/cumulo_autumn), we can stream this multi-prompt text-to-image generation process to generate images for ever.
 
@@ -212,8 +208,9 @@ for _ in range(50):
 imageio.mimsave('my_beautiful_creation.gif', frames, loop=0)
 ```
 
+---
 
-#### Region-Based Multi-Text-to-Image Generation
+### Region-Based Multi-Text-to-Image Generation
 
 We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs.
 The first example is a simple example of generation 
@@ -222,9 +219,10 @@ Notice that **our generation results also obeys strict prompt separation**.
 
 **Result:**
 
-<p align="center">
-  <img src="./assets/timessquare_generation_mask.png" width=100%>
-</p>
+| ![mask](./assets/timessquare/timessquare_full.png) | ![result](./assets/timessquare_generation.png) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Image (10 sec) |
+
 <p align="center">
     No more unwanted prompt mixing! Brown boy and pink girl generated simultaneously without a problem.
 </p>
@@ -300,8 +298,9 @@ image = smd(
 image.save('my_beautiful_creation.png')
 ```
 
+---
 
-#### *Larger* Region-Based Multi-Text-to-Image Generation
+### *Larger* Region-Based Multi-Text-to-Image Generation
 
 The below code reproduces the results in the [second video](https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7) of this README page.
 The original MultiDiffusion pipeline using 50 step DDIM sampler takes roughly an hour to run the code, but we have reduced in down to **a minute**.
@@ -312,7 +311,7 @@ The original MultiDiffusion pipeline using 50 step DDIM sampler takes roughly an
 | :----------------------------: |
 | Semantic Brush Input |
 |  ![result](./assets/irworobongdo_generation.png) |
-| Generated Image |
+| Generated Image (59 sec) |
 
 **Code:**
 
@@ -381,8 +380,9 @@ image = smd(
 image.save('my_beautiful_creation.png')
 ```
 
+---
 
-#### Image Inpainting with Prompt Separation
+### Image Inpainting with Prompt Separation
 
 Our pipeline also enables editing and inpainting existing images.
 We also support *any* SD 1.5 checkpoint models.
@@ -393,9 +393,9 @@ The following code is a minimal example of performing prompt separated multi-pro
 
 **Result:**
 
-<p align="center">
-  <img src="./assets/timessquare_inpainting_mask.png" width=100%>
-</p>
+| ![mask](./assets/timessquare/timessquare.jpeg) | ![mask](./assets/timessquare/timessquare_full.png) | ![result](./assets/timessquare_inpainting.png) |
+| :----------------------------: | :----------------------------: | :----------------------------: |
+| Images to Inpaint | Semantic Brush Input | Inpainted Image (9 sec) |
 
 **Code:**
 
@@ -479,8 +479,9 @@ image = smd(
 image.save('my_beautiful_inpainting.png')
 ```
 
+---
 
-#### Panorama Generation
+### Panorama Generation
 
 Our [`model.StableMultiDiffusionPipeline`](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/model/stablemultidiffusion_pipeline.py) supports x10 faster generation of irregularly large size images such as panoramas.
 For example, the following code runs in 10s with a single 2080 Ti GPU.
@@ -489,6 +490,9 @@ For example, the following code runs in 10s with a single 2080 Ti GPU.
 
 <p align="center">
   <img src="./assets/panorama_generation.png" width=100%>
+</p>
+<p align="center">
+    512x3072 image generated in 10 seconds.
 </p>
 
 **Code:**
@@ -508,7 +512,9 @@ smd.sample_panorama('A photo of Alps', height=512, width=3072)
 image.save('my_panorama_creation.png')
 ```
 
-#### Basic StableDiffusion
+---
+
+### Basic StableDiffusion
 
 We also support standard single-prompt single-tile sampling of StableDiffusion checkpoint for completeness.
 This behaves exactly the same as calling [`diffuser`](https://huggingface.co/docs/diffusers/en/index)'s [`StableDiffusionPipeline`](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py).
@@ -536,12 +542,15 @@ image = smd.sample('A photo of the dolomites')
 image.save('my_creation.png')
 ```
 
+---
 
 ### Basic Usage (GUI)
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
 | :----------------------------: | :----------------------------: |
+| Upoad a background image | Type some text prompts |
 | ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
+| Draw | Press the play button and enjoy 🤩 |
 
 1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
 
@@ -549,7 +558,7 @@ image.save('my_creation.png')
 
 3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
 
-4. (bottom-right) **Press play button have fun!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
+4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
 
 
 
@@ -609,7 +618,7 @@ The interface is summarized in the image below ⬇️:
 
 ## 🚩 **Updates**
 
-- 🏃 Project page and the detailed demo instruction coming very soon!
+- 🏃 Working on project page and public demo
 - ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
 - ✅ March 15, 2023: Added detailed instructions in this README for creators.
 - ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
@@ -631,7 +640,7 @@ Please cite us if you find our project useful!
 
 ```latex
 @article{lee2024streammultidiffusion,
-    title={StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control},
+    title={{StreamMultiDiffusion:} Real-Time Interactive Generation with Region-Based Semantic Control},
     author={Lee, Jaerin and Jung, Daniel Sungho and Lee, Kanggeon and Lee, Kyoung Mu},
     journal={arXiv preprint arXiv:2403.09055},
     year={2024}
