@@ -46,10 +46,10 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
-- [⭐️ Features](#features)
-- [🚩 Updates](#updates)
-- [🤖 Installation](#installation)
-- [⚡ Usage](#usage)
+- [⭐️ Features](#---features)
+- [🚩 Updates](#---updates)
+- [🤖 Installation](#---installation)
+- [⚡ Usage](#---usage)
   * [Overview](#overview)
   * [Basic Usage (Python)](#basic-usage--python-)
   * [Streaming Generation Process](#streaming-generation-process)
