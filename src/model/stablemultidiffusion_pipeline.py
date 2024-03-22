@@ -39,7 +39,7 @@ class StableMultiDiffusionPipeline(nn.Module):
         self,
         device: torch.device,
         dtype: torch.dtype = torch.float16,
-        sd_version: Literal['1.5', '2.0', '2.1', 'xl'] = '1.5',
+        sd_version: Literal['1.5'] = '1.5',
         hf_key: Optional[str] = None,
         lora_key: Optional[str] = None,
         load_from_local: bool = False, # Turn on if you have already downloaed LoRA & Hugging Face hub is down.

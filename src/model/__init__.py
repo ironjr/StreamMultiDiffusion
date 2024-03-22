@@ -19,4 +19,5 @@
 # SOFTWARE.
 
 from .stablemultidiffusion_pipeline import StableMultiDiffusionPipeline
+from .stablemultidiffusion_sdxl_pipeline import StableMultiDiffusionSDXLPipeline
 from .streammultidiffusion import StreamMultiDiffusion
