@@ -3,6 +3,7 @@
 🦦🦦 StreamMultiDiffusion 🦦🦦
 </h1>
 
+
 <p align="center">
   <img src="./assets/demo.gif" width=90%>
 </p>
@@ -24,6 +25,8 @@
 [![X](https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_)](https://twitter.com/_ironjr_)
 [![LICENSE](https://img.shields.io/badge/license-MIT-lightgrey)](https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE)
 [![HFPaper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow)](https://huggingface.co/papers/2403.09055)
+[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+
 
 </div>
 
@@ -62,6 +65,17 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
+## 🚩 **Updates**
+
+- 🏃 More public demos are expected!
+- ✅ March 19, 2023: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
+- ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
+- ✅ March 15, 2023: Added detailed instructions in this README for creators.
+- ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
+- ✅ March 13, 2023: Code release!
+
+---
+
 ## 🤖 Installation
 
 ```bash
@@ -84,6 +98,7 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 2. Jupyter Lab demos are available in the `notebooks` directory. Simply type `jupyter lab` in the command prompt will open a Jupyter server.
 
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
+
 
 
 ### Basic Usage (Python)
@@ -560,6 +575,20 @@ image.save('my_creation.png')
 
 4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
 
+---
+
+### Demo Application (Semantic Palette)
+
+<div>
+
+<p align="center">
+  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
+</p>
+
+</div>
+
+
+Coming Soon!
 
 
 ### Basic Usage (CLI)
@@ -615,15 +644,6 @@ The interface is summarized in the image below ⬇️:
 
 
 ---
-
-## 🚩 **Updates**
-
-- 🏃 Working on project page and public demo
-- ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
-- ✅ March 15, 2023: Added detailed instructions in this README for creators.
-- ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
-- ✅ March 13, 2023: Code release!
-
 
 ## 🙋 FAQ
 
