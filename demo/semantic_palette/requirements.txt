@@ -1,0 +1,14 @@
+torch==2.0.1
+torchvision
+xformers==0.0.22
+einops
+diffusers
+transformers
+huggingface_hub[torch]
+gradio
+Pillow
+emoji
+numpy
+tqdm
+jupyterlab
+spaces

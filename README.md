@@ -1,37 +1,6 @@
 <div align="center">
-<h1>
-🦦🦦 StreamMultiDiffusion 🦦🦦
-</h1>
 
-</div>
-
-
-## 🚨🚨🚨 NEWS: Our first public demo is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)!
-
-We demonstrate _semantic palette_, a new drawing paradigm where users paint semantic meanings in addition to colors to create artworks.
-This is enabled by our acceleration technique for arbitrary-sized image generation from multiple region-based semantic controls.
-We give our huge thanks to the almighty [Hugging Face 🤗 team](https://huggingface.co/) and [Gradio team](https://www.gradio.app/) for their invaluable help in building this demo! 🤩
-The application can be run in your local, since we have provided the app [in this repository](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/app_semantic_draw.py), too!
-Just run `python app_semantic_draw.py` will do the job.
-
-
-<div align="center">
-
-
-<p align="center">
-  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
-</p>
-
-
----
-
-
-<p align="center">
-  <img src="./assets/demo.gif" width=90%>
-</p>
-
-
-<h2><a href="https://arxiv.org/abs/2403.09055">StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</a></h2>
+<h1>StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</h1>
 
 [**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
 
@@ -47,8 +16,9 @@ Just run `python app_semantic_draw.py` will do the job.
 [![X](https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_)](https://twitter.com/_ironjr_)
 [![LICENSE](https://img.shields.io/badge/license-MIT-lightgrey)](https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE)
 [![HFPaper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow)](https://huggingface.co/papers/2403.09055)
-[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
 
+[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)
 
 </div>
 
@@ -57,12 +27,14 @@ Just run `python app_semantic_draw.py` will do the job.
 </p>
 
 tl;dr: StreamMultiDiffusion is a *real-time* *interactive* *multiple*-text-to-image generation from user-assigned *regional* text prompts.
-
 In other words, **you can now draw ✍️ using brushes 🖌️ that paints *meanings* 🧠 in addition to *colors*** 🌈!
 
-Our paper is mainly about establishing the compatibility between region-based controlling techniques of [MultiDiffusion](https://multidiffusion.github.io/) and acceleration techniques of [LCM](https://latent-consistency-models.github.io/) and [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion).
+<details>
+  
+<summary>What's the paper about?</summary>
+Our paper is mainly about establishing the compatibility between region-based controlling techniques of <a href="https://multidiffusion.github.io/">MultiDiffusion</a> and acceleration techniques of <a href="https://latent-consistency-models.github.io/">LCM</a> and <a href="https://github.com/cumulo-autumn/StreamDiffusion">StreamDiffusion</a>.
 To our surprise, these works were not compatible before, limiting the possible applications from both branches of works.
-The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
+The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using <a href="https://huggingface.co/runwayml/stable-diffusion-v1-5">StableDiffusion v1.5</a> in the video below ⬇️:
 
 https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
 
@@ -70,6 +42,34 @@ The video means that this project finally lets you work with **large size image 
 Previously, this was not feasible at all.
 Taking an hour per trial means that you cannot sample multiple times to pick the best generation you want or to tune the generation process to realize your intention.
 However, we have decreased the latency **from an hour to a minute**, making the technology workable for creators (hopefully).
+
+</details>
+
+---
+
+- [⭐️ Features](#---features)
+- [🚩 Updates](#---updates)
+- [🤖 Installation](#---installation)
+- [⚡ Usage](#---usage)
+  * [Overview](#overview)
+  * [Basic Usage (Python)](#basic-usage--python-)
+  * [Streaming Generation Process](#streaming-generation-process)
+  * [Region-Based Multi-Text-to-Image Generation](#region-based-multi-text-to-image-generation)
+  * [Larger Region-Based Multi-Text-to-Image Generation](#larger-region-based-multi-text-to-image-generation)
+  * [Image Inpainting with Prompt Separation](#image-inpainting-with-prompt-separation)
+  * [Panorama Generation](#panorama-generation)
+  * [Basic StableDiffusion](#basic-stablediffusion)
+  * [Basic Usage (GUI)](#basic-usage--gui-)
+  * [Demo Application (Semantic Palette)](#demo-application--semantic-palette-)
+  * [Basic Usage (CLI)](#basic-usage--cli-)
+- [💼 Further Information](#---further-information)
+  * [User Interface (GUI)](#user-interface--gui-)
+  * [Demo Application Architecture](#demo-application-architecture)
+- [🙋 FAQ](#---faq)
+  * [What is Semantic Palette Anyway?](#what-is--semantic-palette--anyway-)
+- [🌏 Citation](#---citation)
+- [🤗 Acknowledgement](#---acknowledgement)
+- [📧 Contact](#---contact)
 
 ---
 
@@ -84,6 +84,19 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 2. **Prompt separation.** Be bothered no more by unintentional content mixing when generating two or more objects at the same time!
 
 3. **Real-time image inpainting and editing.** Basically, you draw upon any uploaded photo or a piece of art you want.
+
+---
+
+## 🚩 Updates
+
+- 🏃 More public demos are expected!
+- 🔥 March 22, 2024: Our demo app _Semantic Palette_ is now available on [Google Colab](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)! Huge thanks to [@camenduru](https://github.com/camenduru)!
+- 🔥 March 22, 2024: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "your model here"` to run the app from your local machine.
+- 🔥 March 19, 2024: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
+- 🔥 March 16, 2024: Added examples and instructions for region-based generation, panorama generation, and inpainting.
+- 🔥 March 15, 2024: Added detailed instructions in this README for creators.
+- 🔥 March 14, 2024: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
+- 🔥 March 13, 2024: Code release!
 
 ---
 
@@ -103,12 +116,13 @@ StreamMultiDiffusion is served in three different forms.
 1. The main interactive demo powered by Gradio is available at `src/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoint} --height 512 --width 512 --port 8000
+CUDA_VISIBLE_DEVICES=0 python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --width 512 --port 8000
 ```
 
 2. Jupyter Lab demos are available in the `notebooks` directory. Simply type `jupyter lab` in the command prompt will open a Jupyter server.
 
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
+
 
 
 ### Basic Usage (Python)
@@ -569,7 +583,41 @@ image.save('my_creation.png')
 
 ---
 
-### Basic Usage (GUI)
+### Demo Application (StreamMultiDiffusion)
+
+<p align="center">
+  <img src="./assets/demo.gif" width=90%>
+</p>
+
+#### Features
+
+- Drawing with _semantic palette_ with streaming interface.
+- Fully web-based GUI, powered by Gradio.
+- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
+- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
+- Supports 8 semantic brushes.
+
+#### Run
+
+```bash
+cd src/demo/stream
+python app.py [other options]
+```
+
+#### Other options
+
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
+- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
+- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
+- `--display_col`: Optional. Number of displays in a row. Useful for buffering the old frames. Default: 2.
+- `--display_row`: Optional. Number of displays in a column. Useful for buffering the old frames. Default: 2.
+- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
+- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: 2024.
+- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
+- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+
+#### Instructions
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
 | :----------------------------: | :----------------------------: |
@@ -585,7 +633,53 @@ image.save('my_creation.png')
 
 4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
 
+---
 
+### Demo Application (Semantic Palette)
+
+<div>
+
+<p align="center">
+  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
+</p>
+
+</div>
+
+Our first demo _[Semantic Palette](https://huggingface.co/spaces/ironjr/SemanticPalette)_ is now available in your local machine.
+
+#### Features
+
+- Fully web-based GUI, powered by Gradio.
+- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
+- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
+- Supports 5 semantic brushes. If you want more brushes, you can use our python interface directly. Please see our Jupyter notebook references in the `notebooks` directory.
+
+#### Run
+
+```bash
+cd src/demo/semantic_palette
+python app.py [other options]
+```
+
+#### Other options
+
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
+- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
+- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
+- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
+- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: -1 (random).
+- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
+- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+#### Instructions
+
+Instructions on how to use the app to create your images: Please see this twitter [thread](https://twitter.com/_ironjr_/status/1770245714591064066).
+
+#### Tips
+
+I have provided more tips in using the app in another twitter [thread](https://twitter.com/_ironjr_/status/1770716860948025539).
+
+---
 
 ### Basic Usage (CLI)
 
@@ -640,16 +734,6 @@ The interface is summarized in the image below ⬇️:
 
 
 ---
-
-## 🚩 **Updates**
-
-- 🏃 More public demos are expected!
-- ✅ March 19, 2023: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
-- ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
-- ✅ March 15, 2023: Added detailed instructions in this README for creators.
-- ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
-- ✅ March 13, 2023: Code release!
-
 
 ## 🙋 FAQ
 

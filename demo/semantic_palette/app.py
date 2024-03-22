@@ -18,6 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import sys
+
+sys.path.append('../../src')
+
 import argparse
 import random
 import time
@@ -67,10 +71,10 @@ def is_empty_image(im: Image.Image) -> bool:
 
 ### Argument passing
 
-parser = argparse.ArgumentParser(description='Semantic drawing demo powered by StreamMultiDiffusion.')
+parser = argparse.ArgumentParser(description='Semantic Palette demo powered by StreamMultiDiffusion.')
 parser.add_argument('-H', '--height', type=int, default=768)
 parser.add_argument('-W', '--width', type=int, default=1920)
-parser.add_argument('--model', type=str, default=None)
+parser.add_argument('--model', type=str, default=None, help='Hugging face model repository or local path for a SD1.5 model checkpoint to run.')
 parser.add_argument('--bootstrap_steps', type=int, default=1)
 parser.add_argument('--seed', type=int, default=-1)
 parser.add_argument('--device', type=int, default=0)
@@ -83,16 +87,19 @@ opt = parser.parse_args()
 device = f'cuda:{opt.device}' if opt.device >= 0 else 'cpu'
 
 
-model_dict = {
-    'Blazing Drive V11m': 'ironjr/BlazingDriveV11m',
-    # 'Real Cartoon Pixar V5': 'ironjr/RealCartoon-PixarV5',
-    # 'Kohaku V2.1': 'KBlueLeaf/kohaku-v2.1',
-    # 'Realistic Vision V5.1': 'ironjr/RealisticVisionV5-1',
-    # 'Stable Diffusion V1.5': 'runwayml/stable-diffusion-v1-5',
-}
+if opt.model is None:
+    model_dict = {
+        'Blazing Drive V11m': 'ironjr/BlazingDriveV11m',
+        # 'Real Cartoon Pixar V5': 'ironjr/RealCartoon-PixarV5',
+        # 'Kohaku V2.1': 'KBlueLeaf/kohaku-v2.1',
+        # 'Realistic Vision V5.1': 'ironjr/RealisticVisionV5-1',
+        # 'Stable Diffusion V1.5': 'runwayml/stable-diffusion-v1-5',
+    }
+else:
+    model_dict = {opt.model: opt.model}
 
 models = {
-    k: StableMultiDiffusionPipeline(device, sd_version='1.5', hf_key=v, )
+    k: StableMultiDiffusionPipeline(device, sd_version='1.5', hf_key=v, has_i2t=False)
     for k, v in model_dict.items()
 }
 
@@ -356,6 +363,7 @@ def run(state, drawpad):
 
 
 root = pathlib.Path(__file__).parent
+print(root)
 example_root = os.path.join(root, 'examples')
 example_images = glob.glob(os.path.join(example_root, '*.png'))
 example_images = [Image.open(i) for i in example_images]
@@ -526,6 +534,10 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             &nbsp;
             <a href='https://huggingface.co/papers/2403.09055'>
                 <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow'>
+            </a>
+            &nbsp;
+            <a href='https://huggingface.co/spaces/ironjr/SemanticPalette'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-yellow'>
             </a>
         </div>
     </div>
