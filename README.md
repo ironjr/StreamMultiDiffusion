@@ -1,15 +1,6 @@
 <div align="center">
-<h1>
-🦦🦦 StreamMultiDiffusion 🦦🦦
-</h1>
 
-
-<p align="center">
-  <img src="./assets/demo.gif" width=90%>
-</p>
-
-
-<h2><a href="https://arxiv.org/abs/2403.09055">StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</a></h2>
+<h1>StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</h1>
 
 [**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
 
@@ -35,9 +26,11 @@
 </p>
 
 tl;dr: StreamMultiDiffusion is a *real-time* *interactive* *multiple*-text-to-image generation from user-assigned *regional* text prompts.
-
 In other words, **you can now draw ✍️ using brushes 🖌️ that paints *meanings* 🧠 in addition to *colors*** 🌈!
 
+<details>
+  
+<summary>What's the paper about?</summary>
 Our paper is mainly about establishing the compatibility between region-based controlling techniques of [MultiDiffusion](https://multidiffusion.github.io/) and acceleration techniques of [LCM](https://latent-consistency-models.github.io/) and [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion).
 To our surprise, these works were not compatible before, limiting the possible applications from both branches of works.
 The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
@@ -48,6 +41,37 @@ The video means that this project finally lets you work with **large size image 
 Previously, this was not feasible at all.
 Taking an hour per trial means that you cannot sample multiple times to pick the best generation you want or to tune the generation process to realize your intention.
 However, we have decreased the latency **from an hour to a minute**, making the technology workable for creators (hopefully).
+
+</details>
+
+---
+
+- [⭐️ Features](#---features)
+- [🚩 Updates](#---updates)
+- [🤖 Installation](#---installation)
+- [⚡ Usage](#--usage)
+  * [Overview](#overview)
+  * [Basic Usage (Python)](#basic-usage--python-)
+  * [Streaming Generation Process](#streaming-generation-process)
+  * [Region-Based Multi-Text-to-Image Generation](#region-based-multi-text-to-image-generation)
+  * [*Larger* Region-Based Multi-Text-to-Image Generation](#-larger--region-based-multi-text-to-image-generation)
+  * [Image Inpainting with Prompt Separation](#image-inpainting-with-prompt-separation)
+  * [Panorama Generation](#panorama-generation)
+  * [Basic StableDiffusion](#basic-stablediffusion)
+  * [Basic Usage (GUI)](#basic-usage--gui-)
+  * [Demo Application (Semantic Palette)](#demo-application--semantic-palette-)
+    + [Features](#features)
+    + [Run](#run)
+    + [Other options](#other-options)
+  * [Basic Usage (CLI)](#basic-usage--cli-)
+- [💼 Further Information](#---further-information)
+  * [User Interface (GUI)](#user-interface--gui-)
+  * [Demo Application Architecture](#demo-application-architecture)
+- [🙋 FAQ](#---faq)
+  * [What is _Semantic Palette_ Anyway?](#what-is--semantic-palette--anyway-)
+- [🌏 Citation](#---citation)
+- [🤗 Acknowledgement](#---acknowledgement)
+- [📧 Contact](#---contact)
 
 ---
 
@@ -65,7 +89,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
-## 🚩 **Updates**
+## 🚩 Updates
 
 - 🏃 More public demos are expected!
 - ✅ March 22, 2023: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "your model here"` to run the app from your local machine.
@@ -560,7 +584,14 @@ image.save('my_creation.png')
 
 ---
 
-### Basic Usage (GUI)
+### Demo Application (StreamMultiDiffusion)
+
+<p align="center">
+  <img src="./assets/demo.gif" width=90%>
+</p>
+
+
+#### Usage
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
 | :----------------------------: | :----------------------------: |
@@ -605,6 +636,7 @@ python app.py [other options]
 ```
 
 #### Other options
+
 - `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
 - `--height` (`-H`): Optional. Height of the canvas. Default: 768.
 - `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
@@ -612,6 +644,12 @@ python app.py [other options]
 - `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: -1 (random).
 - `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
 - `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+#### Instructions
+
+
+
+#### Tips
 
 
 ---
