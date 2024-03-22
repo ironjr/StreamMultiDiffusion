@@ -31,9 +31,9 @@ In other words, **you can now draw ✍️ using brushes 🖌️ that paints *mea
 <details>
   
 <summary>What's the paper about?</summary>
-Our paper is mainly about establishing the compatibility between region-based controlling techniques of [MultiDiffusion](https://multidiffusion.github.io/) and acceleration techniques of [LCM](https://latent-consistency-models.github.io/) and [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion).
+Our paper is mainly about establishing the compatibility between region-based controlling techniques of <a href="https://multidiffusion.github.io/">MultiDiffusion</a> and acceleration techniques of <a href="https://latent-consistency-models.github.io/">LCM</a> and <a href="https://github.com/cumulo-autumn/StreamDiffusion">StreamDiffusion</a>.
 To our surprise, these works were not compatible before, limiting the possible applications from both branches of works.
-The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using [StableDiffusion v1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) in the video below ⬇️:
+The effect of acceleration and stabilization of multiple region-based text-to-image generation technique is demonstrated using <a href="https://huggingface.co/runwayml/stable-diffusion-v1-5">StableDiffusion v1.5</a> in the video below ⬇️:
 
 https://github.com/ironjr/MagicDraw/assets/12259041/9dda9740-58ba-4a96-b8c1-d40765979bd7
 
