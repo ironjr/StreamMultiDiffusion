@@ -3,28 +3,6 @@
 🦦🦦 StreamMultiDiffusion 🦦🦦
 </h1>
 
-</div>
-
-
-## 🚨🚨🚨 NEWS: Our first public demo is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)!
-
-We demonstrate _semantic palette_, a new drawing paradigm where users paint semantic meanings in addition to colors to create artworks.
-This is enabled by our acceleration technique for arbitrary-sized image generation from multiple region-based semantic controls.
-We give our huge thanks to the almighty [Hugging Face 🤗 team](https://huggingface.co/) and [Gradio team](https://www.gradio.app/) for their invaluable help in building this demo! 🤩
-The application can be run in your local, since we have provided the app [in this repository](https://github.com/ironjr/StreamMultiDiffusion/blob/main/src/app_semantic_draw.py), too!
-Just run `python app_semantic_draw.py` will do the job.
-
-
-<div align="center">
-
-
-<p align="center">
-  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
-</p>
-
-
----
-
 
 <p align="center">
   <img src="./assets/demo.gif" width=90%>
@@ -87,6 +65,17 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
+## 🚩 **Updates**
+
+- 🏃 More public demos are expected!
+- ✅ March 19, 2023: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
+- ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
+- ✅ March 15, 2023: Added detailed instructions in this README for creators.
+- ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
+- ✅ March 13, 2023: Code release!
+
+---
+
 ## 🤖 Installation
 
 ```bash
@@ -109,6 +98,7 @@ CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoi
 2. Jupyter Lab demos are available in the `notebooks` directory. Simply type `jupyter lab` in the command prompt will open a Jupyter server.
 
 3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
+
 
 
 ### Basic Usage (Python)
@@ -585,6 +575,20 @@ image.save('my_creation.png')
 
 4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
 
+---
+
+### Demo Application (Semantic Palette)
+
+<div>
+
+<p align="center">
+  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
+</p>
+
+</div>
+
+
+Coming Soon!
 
 
 ### Basic Usage (CLI)
@@ -640,16 +644,6 @@ The interface is summarized in the image below ⬇️:
 
 
 ---
-
-## 🚩 **Updates**
-
-- 🏃 More public demos are expected!
-- ✅ March 19, 2023: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
-- ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
-- ✅ March 15, 2023: Added detailed instructions in this README for creators.
-- ✅ March 14, 2023: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
-- ✅ March 13, 2023: Code release!
-
 
 ## 🙋 FAQ
 
