@@ -644,10 +644,11 @@ python app.py [other options]
 
 #### Instructions
 
-
+Instructions on how to use the app to create your images: Please see this twitter [thread](https://twitter.com/_ironjr_/status/1770245714591064066).
 
 #### Tips
 
+I have provided more tips in using the app in another twitter [thread](https://twitter.com/_ironjr_/status/1770716860948025539).
 
 ---
 
