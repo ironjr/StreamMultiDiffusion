@@ -589,8 +589,35 @@ image.save('my_creation.png')
   <img src="./assets/demo.gif" width=90%>
 </p>
 
+#### Features
 
-#### Usage
+- Drawing with _semantic palette_ with streaming interface.
+- Fully web-based GUI, powered by Gradio.
+- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
+- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
+- Supports 8 semantic brushes.
+
+#### Run
+
+```bash
+cd src/demo/stream
+python app.py [other options]
+```
+
+#### Other options
+
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
+- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
+- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
+- `--display_col`: Optional. Number of displays in a row. Useful for buffering the old frames. Default: 2.
+- `--display_row`: Optional. Number of displays in a column. Useful for buffering the old frames. Default: 2.
+- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
+- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: 2024.
+- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
+- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+
+#### Instructions
 
 | ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
 | :----------------------------: | :----------------------------: |
