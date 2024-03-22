@@ -68,7 +68,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 ## 🚩 **Updates**
 
 - 🏃 More public demos are expected!
-- ✅ March 21, 2023: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "*your model here*"' to run the app from your local machine.
+- ✅ March 21, 2023: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "*your model here*"` to run the app from your local machine.
 - ✅ March 19, 2023: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
 - ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
 - ✅ March 15, 2023: Added detailed instructions in this README for creators.
