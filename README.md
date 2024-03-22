@@ -68,6 +68,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 ## 🚩 **Updates**
 
 - 🏃 More public demos are expected!
+- ✅ March 21, 2023: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "*your model here*"' to run the app from your local machine.
 - ✅ March 19, 2023: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
 - ✅ March 16, 2023: Added examples and instructions for region-based generation, panorama generation, and inpainting.
 - ✅ March 15, 2023: Added detailed instructions in this README for creators.
@@ -92,7 +93,7 @@ StreamMultiDiffusion is served in three different forms.
 1. The main interactive demo powered by Gradio is available at `src/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python app.py --model {your stable diffusion 1.5 checkpoint} --height 512 --width 512 --port 8000
+CUDA_VISIBLE_DEVICES=0 python app.py --model "*your stable diffusion 1.5 checkpoint*" --height 512 --width 512 --port 8000
 ```
 
 2. Jupyter Lab demos are available in the `notebooks` directory. Simply type `jupyter lab` in the command prompt will open a Jupyter server.
