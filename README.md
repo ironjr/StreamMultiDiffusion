@@ -588,9 +588,33 @@ image.save('my_creation.png')
 
 </div>
 
+Our first demo _[Semantic Palette](https://huggingface.co/spaces/ironjr/SemanticPalette)_ is now available in your local machine.
 
-Coming Soon!
+#### Features
 
+- Fully web-based GUI, powered by Gradio.
+- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
+- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
+- Supports 5 semantic brushes. If you want more brushes, you can use our python interface directly. Please see our Jupyter notebook references in the `notebooks` directory.
+
+#### Run
+
+```bash
+cd src/demo/semantic_palette
+python app.py [other options]
+```
+
+#### Other options
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
+- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
+- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
+- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
+- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: -1 (random).
+- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
+- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+
+---
 
 ### Basic Usage (CLI)
 
