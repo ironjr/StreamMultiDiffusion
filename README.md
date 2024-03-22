@@ -54,7 +54,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
   * [Basic Usage (Python)](#basic-usage--python-)
   * [Streaming Generation Process](#streaming-generation-process)
   * [Region-Based Multi-Text-to-Image Generation](#region-based-multi-text-to-image-generation)
-  * [Larger Region-Based Multi-Text-to-Image Generation](#-larger--region-based-multi-text-to-image-generation)
+  * [Larger Region-Based Multi-Text-to-Image Generation](#larger-region-based-multi-text-to-image-generation)
   * [Image Inpainting with Prompt Separation](#image-inpainting-with-prompt-separation)
   * [Panorama Generation](#panorama-generation)
   * [Basic StableDiffusion](#basic-stablediffusion)
