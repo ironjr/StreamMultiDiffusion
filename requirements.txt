@@ -3,7 +3,7 @@ torchvision
 xformers==0.0.22
 einops
 diffusers
-transformers
+transformers==4.39.1
 huggingface_hub[torch]
 Pillow
 emoji
@@ -11,3 +11,4 @@ numpy
 tqdm
 jupyterlab
 gradio
+peft==0.10.0
