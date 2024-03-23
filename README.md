@@ -767,3 +767,8 @@ We also give our huge thanks to [@br_d](https://twitter.com/br_d) and [@KBluelea
 ## 📧 Contact
 
 If you have any questions, please email `jarin.lee@gmail.com`.
+
+
+## ⭐️ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ironjr/StreamMultiDiffusion&type=Date)](https://star-history.com/#ironjr/StreamMultiDiffusion&Date)
