@@ -17,7 +17,8 @@
 [![LICENSE](https://img.shields.io/badge/license-MIT-lightgrey)](https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE)
 [![HFPaper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow)](https://huggingface.co/papers/2403.09055)
 
-[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SD1.5-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+[![HFDemo2](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SDXL-yellow)](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)
 
 </div>
@@ -90,6 +91,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 ## 🚩 Updates
 
 - 🏃 More public demos are expected!
+- 🔥 March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
 - 🔥 March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
 - 🔥 March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
 - 🔥 March 22, 2024: Our demo app _Semantic Palette_ is now available on [Google Colab](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)! Huge thanks to [@camenduru](https://github.com/camenduru)!
