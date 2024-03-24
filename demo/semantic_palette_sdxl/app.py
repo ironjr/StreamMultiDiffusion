@@ -39,8 +39,9 @@ import torch
 import gradio as gr
 from huggingface_hub import snapshot_download
 
-from model import StableMultiDiffusionPipeline
+from model import StableMultiDiffusionSDXLPipeline
 from util import seed_everything
+from prompt_util import preprocess_prompts, _quality_dict, _style_dict
 
 
 ### Utils
@@ -70,9 +71,9 @@ def is_empty_image(im: Image.Image) -> bool:
 
 ### Argument passing
 
-parser = argparse.ArgumentParser(description='Semantic Palette demo powered by StreamMultiDiffusion.')
-parser.add_argument('-H', '--height', type=int, default=768)
-parser.add_argument('-W', '--width', type=int, default=1920)
+parser = argparse.ArgumentParser(description='Semantic Palette demo powered by StreamMultiDiffusion with SDXL support.')
+parser.add_argument('-H', '--height', type=int, default=1024)
+parser.add_argument('-W', '--width', type=int, default=2560)
 parser.add_argument('--model', type=str, default=None, help='Hugging face model repository or local path for a SD1.5 model checkpoint to run.')
 parser.add_argument('--bootstrap_steps', type=int, default=1)
 parser.add_argument('--seed', type=int, default=-1)
@@ -88,11 +89,7 @@ device = f'cuda:{opt.device}' if opt.device >= 0 else 'cpu'
 
 if opt.model is None:
     model_dict = {
-        'Blazing Drive V11m': 'ironjr/BlazingDriveV11m',
-        # 'Real Cartoon Pixar V5': 'ironjr/RealCartoon-PixarV5',
-        # 'Kohaku V2.1': 'KBlueLeaf/kohaku-v2.1',
-        # 'Realistic Vision V5.1': 'ironjr/RealisticVisionV5-1',
-        # 'Stable Diffusion V1.5': 'runwayml/stable-diffusion-v1-5',
+        'Animagine XL 3.1': 'cagliostrolab/animagine-xl-3.1',
     }
 else:
     if opt.model.endswith('.safetensors'):
@@ -100,7 +97,7 @@ else:
     model_dict = {os.path.splitext(os.path.basename(opt.model))[0]: opt.model}
 
 models = {
-    k: StableMultiDiffusionPipeline(device, sd_version='1.5', hf_key=v, has_i2t=False)
+    k: StableMultiDiffusionSDXLPipeline(device, hf_key=v, has_i2t=False)
     for k, v in model_dict.items()
 }
 
@@ -265,6 +262,22 @@ def select_model(state, model_id):
     return state
 
 
+def select_style(state, style_name):
+    state.style_name = style_name
+    if opt.verbose:
+        log_state(state)
+
+    return state
+
+
+def select_quality(state, quality_name):
+    state.quality_name = quality_name
+    if opt.verbose:
+        log_state(state)
+
+    return state
+
+
 def import_state(state, json_text):
     current_palette = state.current_palette
     # active_palettes = state.active_palettes
@@ -274,6 +287,8 @@ def import_state(state, json_text):
         gr.update(value=v, visible=True) for v in state.prompt_names
     ] + [
         state.model_id,
+        state.style_name,
+        state.quality_name,
         state.prompts[current_palette],
         state.prompt_names[current_palette],
         state.neg_prompts[current_palette],
@@ -313,20 +328,6 @@ def run(state, drawpad):
     masks = masks * foreground_mask
     masks = masks[has_masks]
 
-    # if inpainting_mode:
-    #     prompts = state.prompts[1:len(masks)+1]
-    #     negative_prompts = state.neg_prompts[1:len(masks)+1]
-    #     mask_strengths = state.mask_strengths[:len(masks)]
-    #     mask_stds = state.mask_stds[:len(masks)]
-    #     prompt_strengths = state.prompt_strengths[:len(masks)]
-    # else:
-    #     masks = torch.cat([torch.ones_like(foreground_mask), masks], dim=0)
-    #     prompts = state.prompts[:len(masks)+1]
-    #     negative_prompts = state.neg_prompts[:len(masks)+1]
-    #     mask_strengths = [1] + state.mask_strengths[:len(masks)]
-    #     mask_stds = [0] + [state.mask_stds[:len(masks)]
-    #     prompt_strengths = [1] + state.prompt_strengths[:len(masks)]
-
     if inpainting_mode:
         prompts = [state.prompts[v + 1] for v in has_masks]
         negative_prompts = [state.neg_prompts[v + 1] for v in has_masks]
@@ -340,6 +341,9 @@ def run(state, drawpad):
         mask_strengths = [1] + [state.mask_strengths[v] for v in has_masks]
         mask_stds = [0] + [state.mask_stds[v] for v in has_masks]
         prompt_strengths = [1] + [state.prompt_strengths[v] for v in has_masks]
+
+    prompts, negative_prompts = preprocess_prompts(
+        prompts, negative_prompts, style_name=state.style_name, quality_name=state.quality_name)
 
     return generate(
         state,
@@ -355,6 +359,7 @@ def run(state, drawpad):
         height=opt.height,
         width=opt.width,
         bootstrap_steps=2,
+        guidance_scale=0,
     )
 
 
@@ -456,28 +461,14 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
         # Cursor.
         state.current_palette = 0 # 0: Background; 1,2,3,...: Layers
         state.model_id = list(model_dict.keys())[0]
+        state.style_name = '(None)'
+        state.quality_name = 'Standard v3.1'
 
         # State variables (one-hot).
         state.active_palettes = 1
 
         # Front-end initialized to the default values.
         prompt_props_ = prompt_props()
-        # state.prompt_names = [
-        #     '🌄 Background',
-        #     '👧 Girl',
-        #     '👦 Boy',
-        #     '🐶 Dog',
-        #     '🚗 Car',
-        #     '💐 Garden',
-        # ] + ['🎨 New Palette' for _ in range(opt.max_palettes - 5)]
-        # state.prompts = [
-        #     'Maximalism, best quality, high quality, city lights, times square',
-        #     '1girl, looking at viewer, pink hair, leather jacket',
-        #     '1boy, looking at viewer, brown hair, casual shirt',
-        #     'Doggy body part',
-        #     'Car',
-        #     'Flower garden',
-        # ] + ['' for _ in range(opt.max_palettes - 5)]
         state.prompt_names = [
             '🌄 Background',
             '👧 Girl',
@@ -508,7 +499,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
         """
 <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
     <div>
-        <h1>🧠 Semantic Palette 🎨</h1>
+        <h1>🧠 Semantic Palette SDXL 🎨</h1>
         <h5 style="margin: 0;">powered by</h5>
         <h3>StreamMultiDiffusion: Real-Time Interactive Generation with Region-Based Semantic Control</h3>
         <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
@@ -668,6 +659,21 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
                         value=state.value.model_id,
                     )
 
+                    with gr.Accordion(label='Prompt Engineering', open=True):
+                        iface.quality_select = gr.Dropdown(
+                            label='Quality Presets',
+                            interactive=True,
+                            choices=list(_quality_dict.keys()),
+                            value='Standard v3.1',
+                        )
+                        iface.style_select = gr.Radio(
+                            label='Style Preset',
+                            container=True,
+                            interactive=True,
+                            choices=list(_style_dict.keys()),
+                            value='(None)',
+                        )
+
             with gr.Group(elem_id='control-panel'):
 
                 with gr.Row():
@@ -811,12 +817,26 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
         outputs=state,
         api_name='model_select',
     )
+    iface.style_select.change(
+        fn=select_style,
+        inputs=[state, iface.style_select],
+        outputs=state,
+        api_name='style_select',
+    )
+    iface.quality_select.change(
+        fn=select_quality,
+        inputs=[state, iface.quality_select],
+        outputs=state,
+        api_name='quality_select',
+    )
 
     iface.btn_export_state.click(lambda x: vars(x), state, iface.json_state_export)
     iface.btn_import_state.click(import_state, [state, iface.tbox_state_import], [
         state,
         *iface.btn_semantics,
         iface.model_select,
+        iface.style_select,
+        iface.quality_select,
         iface.tbox_prompt,
         iface.tbox_name,
         iface.tbox_neg_prompt,
