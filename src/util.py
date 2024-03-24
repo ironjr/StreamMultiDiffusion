@@ -20,7 +20,7 @@
 
 import concurrent.futures
 import time
-from typing import Any, Callable, List, Tuple, Union
+from typing import Any, Callable, List, Literal, Tuple, Union
 
 from PIL import Image
 import numpy as np
@@ -31,12 +31,38 @@ import torch.cuda.amp as amp
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 
+from diffusers import (
+    DiffusionPipeline,
+    StableDiffusionPipeline,
+    StableDiffusionXLPipeline,
+)
+
 
 def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
+
+
+def load_model(
+    model_key: str,
+    sd_version: Literal['1.5', 'xl'],
+    device: torch.device,
+    dtype: torch.dtype,
+) -> torch.nn.Module:
+    if model_key.endswith('.safetensors'):
+        if sd_version == '1.5':
+            pipeline = StableDiffusionPipeline
+        elif sd_version == 'xl':
+            pipeline = StableDiffusionXLPipeline
+        else:
+            raise ValueError(f'Stable Diffusion version {sd_version} not supported.')
+        return pipeline.from_single_file(model_key, torch_dtype=dtype).to(device)
+    try:
+        return DiffusionPipeline.from_pretrained(model_key, variant='fp16', torch_dtype=dtype).to(device)
+    except:
+        return DiffusionPipeline.from_pretrained(model_key, variant=None, torch_dtype=dtype).to(device)
 
 
 def get_cutoff(cutoff: float = None, scale: float = None) -> float:

@@ -32,7 +32,7 @@ from collections import deque
 from typing import Tuple, List, Literal, Optional, Union
 from PIL import Image
 
-from util import gaussian_lowpass, shift_to_mask_bbox_center
+from util import load_model, gaussian_lowpass, shift_to_mask_bbox_center
 from data import BackgroundObject, LayerObject, BackgroundState #, LayerState
 
 
@@ -111,31 +111,19 @@ class StreamMultiDiffusion(nn.Module):
 
         print(f'[INFO]     Loading Stable Diffusion...')
         get_scheduler = lambda pipe: LCMScheduler.from_config(pipe.scheduler.config)
-        if hf_key is not None:
-            print(f'[INFO]     Using Hugging Face custom model key: {hf_key}')
-            model_key = hf_key
-            variant = None
-        # if self.sd_version == 'xl':
-        #     if hf_key is None:
-        #         model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
-        #         variant='fp16'
-        #     lora_key = 'latent-consistency/lcm-lora-sdxl' # LCM-LoRA
-        # elif self.sd_version == 'xl-turbo':
-        #     raise NotImplementedError
-        # elif self.sd_version == 'xl-lightning':
-        #     if hf_key is None:
-        #         model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
-        #         variant='fp16'
-        #     repo = 'ByteDance/SDXL-Lightning'
-        #     ckpt = 'sdxl_lightning_4step_lora.safetensors'
-        #     lora_key = 'latent-consistency/lcm-lora-sdxl' # SDXL-Lightning
-        #     get_scheduler = lambda pipe: EulerDiscreteScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
-        # elif self.sd_version == '1.5':
+        lora_weight_name = None
         if self.sd_version == '1.5':
-            if hf_key is None:
+            if hf_key is not None:
+                print(f'[INFO]     Using custom model key: {hf_key}')
+                model_key = hf_key
+            else:
                 model_key = 'runwayml/stable-diffusion-v1-5'
-                variant='fp16'
             lora_key = 'latent-consistency/lcm-lora-sdv1-5'
+            lora_weight_name = 'pytorch_lora_weights.safetensors'
+        # elif self.sd_version == 'xl':
+        #     model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
+        #     lora_key = 'latent-consistency/lcm-lora-sdxl'
+        #     lora_weight_name = 'pytorch_lora_weights.safetensors'
         else:
             raise ValueError(f'Stable Diffusion version {self.sd_version} not supported.')
 
@@ -151,8 +139,9 @@ class StreamMultiDiffusion(nn.Module):
         self.i2t_processor = Blip2Processor.from_pretrained('Salesforce/blip2-opt-2.7b')
         self.i2t_model = Blip2ForConditionalGeneration.from_pretrained('Salesforce/blip2-opt-2.7b')
 
-        self.pipe = DiffusionPipeline.from_pretrained(model_key, variant=variant, torch_dtype=dtype).to(self.device)
-        self.pipe.load_lora_weights(lora_key, adapter_name='lcm')
+        self.pipe = load_model(model_key, self.sd_version, self.device, self.dtype)
+
+        self.pipe.load_lora_weights(lora_key, weight_name=lora_weight_name, adapter_name='lcm')
         self.pipe.fuse_lora(
             fuse_unet=True,
             fuse_text_encoder=True,

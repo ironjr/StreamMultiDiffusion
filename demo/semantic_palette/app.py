@@ -36,7 +36,6 @@ import numpy as np
 from PIL import Image
 import torch
 
-import spaces
 import gradio as gr
 from huggingface_hub import snapshot_download
 
@@ -96,7 +95,9 @@ if opt.model is None:
         # 'Stable Diffusion V1.5': 'runwayml/stable-diffusion-v1-5',
     }
 else:
-    model_dict = {opt.model: opt.model}
+    if opt.model.endswith('.safetensors'):
+        opt.model = os.path.abspath(os.path.join('checkpoints', opt.model))
+    model_dict = {os.path.splitext(os.path.basename(opt.model))[0]: opt.model}
 
 models = {
     k: StableMultiDiffusionPipeline(device, sd_version='1.5', hf_key=v, has_i2t=False)
@@ -285,7 +286,6 @@ def import_state(state, json_text):
 
 ### Main worker
 
-@spaces.GPU
 def generate(state, *args, **kwargs):
     return models[state.model_id](*args, **kwargs)
 

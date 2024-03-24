@@ -22,6 +22,7 @@ import sys
 
 sys.path.append('../../src')
 
+import os
 import argparse
 import random
 import time
@@ -122,6 +123,11 @@ opt = parser.parse_args()
 ### Global variables and data structures
 
 device = f'cuda:{opt.device}' if opt.device >= 0 else 'cpu'
+
+if opt.model is not None:
+    if opt.model.endswith('.safetensors'):
+        opt.model = os.path.abspath(os.path.join('checkpoints', opt.model))
+    model_name = os.path.splitext(os.path.basename(opt.model))[0]
 
 streamer = StreamMultiDiffusion(
     device,
