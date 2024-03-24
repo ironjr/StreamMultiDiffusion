@@ -17,7 +17,8 @@
 [![LICENSE](https://img.shields.io/badge/license-MIT-lightgrey)](https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE)
 [![HFPaper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow)](https://huggingface.co/papers/2403.09055)
 
-[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SD1.5-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+[![HFDemo2](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SDXL-yellow)](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)
 
 </div>
@@ -90,6 +91,8 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 ## 🚩 Updates
 
 - 🏃 More public demos are expected!
+- 🔥 March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
+- 🔥 March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
 - 🔥 March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
 - 🔥 March 22, 2024: Our demo app _Semantic Palette_ is now available on [Google Colab](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)! Huge thanks to [@camenduru](https://github.com/camenduru)!
 - 🔥 March 22, 2024: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "your model here"` to run the app from your local machine.
@@ -169,7 +172,6 @@ device = torch.device(f'cuda:{device}')
 smd = StreamMultiDiffusion(
     device,
     hf_key='ironjr/BlazingDriveV11m',
-    sd_version='1.5',
     height=height,
     width=width,
     cfg_type='none',
@@ -291,7 +293,6 @@ device = torch.device(f'cuda:{device}')
 smd = StableMultiDiffusionPipeline(
     device,
     hf_key='ironjr/BlazingDriveV11m',
-    sd_version='1.5',
 )
 
 # Load prompts.
@@ -334,6 +335,112 @@ image = smd(
     height=height,
     width=width,
     bootstrap_steps=2,
+)
+image.save('my_beautiful_creation.png')
+```
+
+---
+
+### (🔥NEW!) Region-Based Multi-Text-to-Image Generation with Custom SDXL
+
+We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs using custom SDXL models.
+This is powered by [SDXL-Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) and our stabilization trick for MultiDiffusion in conjunction with Lightning-type sampling algorithm.
+
+#### Known Issue:
+
+SDXL-Lightning support is currently experimental, so there can be additional issues I have not yet noticed.
+Please open an issue or a pull request if you find any.
+These are the currently known SDXL-Lightning-specific issues compared to SD1.5 models.
+- The model tends to be less obedient to the text prompts. SDXL-Lightning-specific prompt engineering may be required. The problem is less severe in custom models, such as [this](https://huggingface.co/cagliostrolab/animagine-xl-3.1).
+- The vanilla SDXL-Lightning model produces NaNs when used as a FP16 variant. Please use `dtype=torch.float32` option for initializing `StableMultiDiffusionSDXLPipeline` if you want the _vanilla_ version of the SDXL-Lightning. This is _not_ a problem when using a custom checkpoint. You can use `dtype=torch.float16`.
+
+**Result:**
+
+| ![mask](./assets/fantasy_large/fantasy_large_full.png) | ![result](./assets/fantasy_large_generation.png) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Image (12 sec) |
+
+<p align="center">
+    1024x1024 image generated with <a href="https://huggingface.co/ByteDance/SDXL-Lightning">SDXL-Lightning LoRA</a> and <a href="https://huggingface.co/cagliostrolab/animagine-xl-3.1">Animagine XL 3.1</a> checkpoint.
+</p>
+
+**Code:**
+
+```python
+import torch
+from model import StableMultiDiffusionSDXLPipeline
+from util import seed_everything
+from prompt_util import print_prompts, preprocess_prompts
+
+# The following packages are imported only for loading the images.
+import torchvision.transforms as T
+import requests
+from functools import reduce
+from io import BytesIO
+from PIL import Image
+
+
+seed = 0
+device = 0
+
+# Load the module.
+seed_everything(seed)
+device = torch.device(f'cuda:{device}')
+smd = StableMultiDiffusionSDXLPipeline(
+    device,
+    hf_key='cagliostrolab/animagine-xl-3.1',
+    has_i2t=False,
+)
+
+# Load prompts.
+prompts = [
+    # Background prompt.
+    'purple sky, planets, planets, planets, stars, stars, stars',
+    # Foreground prompts.
+    'a photo of the dolomites, masterpiece, absurd quality, background, no humans',
+    '1girl, looking at viewer, pretty face, blue hair, fantasy style, witch, magi, robe',
+]
+negative_prompts = [
+    '1girl, 1boy, humans, humans, humans',
+    '1girl, 1boy, humans, humans, humans',
+    '',
+]
+negative_prompt_prefix = 'worst quality, bad quality, normal quality, cropped, framed'
+negative_prompts = [negative_prompt_prefix + ', ' + p for p in negative_prompts]
+
+# Preprocess prompts for better results.
+prompts, negative_prompts = preprocess_prompts(
+    prompts,
+    negative_prompts,
+    style_name='(None)',
+    quality_name='Standard v3.1',
+)
+
+# Load masks.
+masks = []
+for i in range(1, 3):
+    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/fantasy_large/fantasy_large_{i}.png'
+    response = requests.get(url)
+    mask = Image.open(BytesIO(response.content)).convert('RGBA')
+    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
+    masks.append(mask)
+# In this example, background is simply set as non-marked regions.
+background = reduce(torch.logical_and, [m == 0 for m in masks])
+masks = torch.stack([background] + masks, dim=0).float()
+
+height, width = masks.shape[-2:] # (1024, 1024) in this example.
+
+# Sample an image.
+image = smd(
+    prompts,
+    negative_prompts,
+    masks=masks,
+    mask_strengths=1,
+    mask_stds=0,
+    height=height,
+    width=width,
+    bootstrap_steps=2,
+    guidance_scale=0,
 )
 image.save('my_beautiful_creation.png')
 ```
@@ -460,7 +567,6 @@ device = torch.device(f'cuda:{device}')
 smd = StableMultiDiffusionPipeline(
     device,
     hf_key='ironjr/BlazingDriveV11m',
-    sd_version='1.5',
 )
 
 # Load the background image you want to start drawing.
