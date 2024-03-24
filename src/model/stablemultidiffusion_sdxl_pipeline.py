@@ -38,9 +38,12 @@ from diffusers.loaders import (
 )
 from diffusers.utils import (
     USE_PEFT_BACKEND,
+    logging,
 )
 from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
+
+logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 import torch
 import torch.nn as nn
@@ -74,6 +77,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
     def __init__(
         self,
         device: torch.device,
+        dtype: torch.dtype = torch.float16,
         hf_key: Optional[str] = None,
         lora_key: Optional[str] = None,
         load_from_local: bool = False, # Turn on if you have already downloaed LoRA & Hugging Face hub is down.
@@ -84,8 +88,10 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         default_boostrap_mix_steps: float = 1.0,
         default_bootstrap_leak_sensitivity: float = 0.2,
         default_preprocess_mask_cover_alpha: float = 0.3,
-        t_index_list: List[int] = [0, 4, 12, 25, 37], # [0, 5, 16, 18, 20, 37], # [0, 12, 25, 37], # Magic number.
+        t_index_list: List[int] = [0, 4, 12, 25, 37], # [0, 5, 16, 18, 20, 37], # # [0, 12, 25, 37], # Magic number.
         mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'discrete',
+        has_i2t: bool = True,
+        lora_weight: float = 1.0,
     ) -> None:
         r"""Stabilized MultiDiffusion for fast sampling.
 
@@ -96,7 +102,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             device (torch.device): Specify CUDA device.
             hf_key (Optional[str]): Custom StableDiffusion checkpoint for
                 stylized generation.
-            lora_key (Optional[str]): Custom LCM LoRA for acceleration.
+            lora_key (Optional[str]): Custom Lightning LoRA for acceleration.
             load_from_local (bool): Turn on if you have already downloaed LoRA 
                 & Hugging Face hub is down.
             default_mask_std (float): Preprocess mask with Gaussian blur with
@@ -132,11 +138,16 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                 smoothness of foreground-background blending. More continuous
                 means more blending, but smaller generated patch depending on
                 the mask standard deviation.
+            has_i2t (bool): Automatic background image to text prompt con-
+                version with BLIP-2 model. May not be necessary for the non-
+                streaming application.
+            lora_weight (float): Adjusts weight of the LCM/Lightning LoRA.
+                Heavily affects the overall quality!
         """
         super().__init__()
 
         self.device = device
-        self.dtype = torch.float32
+        self.dtype = dtype
 
         self.default_mask_std = default_mask_std
         self.default_mask_strength = default_mask_strength
@@ -153,7 +164,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         variant = None
         model_ckpt = None
         lora_ckpt = None
-        # lcm_repo = 'latent-consistency/lcm-lora-sdxl'
         lightning_repo = 'ByteDance/SDXL-Lightning'
         if hf_key is not None:
             print(f'[INFO] Using Hugging Face custom model key: {hf_key}')
@@ -161,7 +171,8 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             lora_ckpt = 'sdxl_lightning_4step_lora.safetensors'
 
             self.pipe = StableDiffusionXLPipeline.from_pretrained(model_key, variant=variant, torch_dtype=self.dtype).to(self.device)
-            self.pipe.load_lora_weights(hf_hub_download(lora_key, lora_weight_name), adapter_name='lightning')
+            self.pipe.load_lora_weights(hf_hub_download(lightning_repo, lora_ckpt), adapter_name='lightning')
+            self.pipe.set_adapters(["lightning"], adapter_weights=[lora_weight])
             self.pipe.fuse_lora()
         else:
             model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
@@ -172,24 +183,31 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             unet.load_state_dict(load_file(hf_hub_download(lightning_repo, model_ckpt), device=self.device))
             self.pipe = StableDiffusionXLPipeline.from_pretrained(model_key, unet=unet, torch_dtype=self.dtype, variant=variant).to(self.device)
 
-        self.i2t_processor = Blip2Processor.from_pretrained('Salesforce/blip2-opt-2.7b')
-        self.i2t_model = Blip2ForConditionalGeneration.from_pretrained('Salesforce/blip2-opt-2.7b')
+        # Create model
+        if has_i2t:
+            self.i2t_processor = Blip2Processor.from_pretrained('Salesforce/blip2-opt-2.7b')
+            self.i2t_model = Blip2ForConditionalGeneration.from_pretrained('Salesforce/blip2-opt-2.7b')
 
-        # Use LCM LoRA by default.
-        # self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
+        # Use SDXL-Lightning LoRA by default.
         self.pipe.scheduler = EulerDiscreteScheduler.from_config(
             self.pipe.scheduler.config, timestep_spacing="trailing")
         self.scheduler = self.pipe.scheduler
-        self.default_num_inference_steps = 8
+        self.default_num_inference_steps = 4
         self.default_guidance_scale = 0.0
 
-        self.prepare_lightning_schedule(t_index_list, 50)
+        if t_index_list is None:
+            self.prepare_lightning_schedule(
+                list(range(self.default_num_inference_steps)),
+                self.default_num_inference_steps,
+            )
+        else:
+            self.prepare_lightning_schedule(t_index_list, 50)
 
         self.vae = self.pipe.vae
         self.tokenizer = self.pipe.tokenizer
         self.tokenizer_2 = self.pipe.tokenizer_2
-        self.text_encoder = self.pipe.text_encoder #.to(torch.float32)
-        self.text_encoder_2 = self.pipe.text_encoder_2 #.to(torch.float32)
+        self.text_encoder = self.pipe.text_encoder
+        self.text_encoder_2 = self.pipe.text_encoder_2
         self.unet = self.pipe.unet
         self.vae_scale_factor = self.pipe.vae_scale_factor
 
@@ -239,7 +257,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                 used in practice. If None, reinitialize the module with the
                 default value.
         """
-
         if t_index_list is None:
             t_index_list = self.default_t_list
         if num_inference_steps is None:
@@ -247,8 +264,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
         self.scheduler.set_timesteps(num_inference_steps)
         self.timesteps = self.scheduler.timesteps[torch.tensor(t_index_list)]
-
-        shape = (len(t_index_list), 1, 1, 1)
 
         # EulerDiscreteScheduler
 
@@ -261,83 +276,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         self.dt = self.sigmas_next - self.sigma_hats
 
         noise_lvs = self.sigmas * (self.sigmas**2 + 1)**(-0.5)
-        self.noise_lvs = noise_lvs[None, :, None, None, None]
-        self.next_noise_lvs = torch.cat([noise_lvs[1:], noise_lvs.new_zeros(1)])[None, :, None, None, None]
-
-    def prepare_lcm_schedule(
-        self,
-        t_index_list: Optional[List[int]] = None,
-        num_inference_steps: Optional[int] = None,
-    ) -> None:
-        r"""Set up different inference schedule for the diffusion model.
-
-        You do not have to run this explicitly if you want to use the default
-        setting, but if you want other time schedules, run this function
-        between the module initialization and the main call.
-
-        Note:
-          - Recommended t_index_lists for LCMs:
-              - [0, 12, 25, 37]: Default schedule for 4 steps. Best for
-                  panorama. Not recommended if you want to use bootstrapping.
-                  Because bootstrapping stage affects the initial structuring
-                  of the generated image & in this four step LCM, this is done
-                  with only at the first step, the structure may be distorted.
-              - [0, 4, 12, 25, 37]: Recommended if you would use 1-step boot-
-                  strapping. Default initialization in this implementation.
-              - [0, 5, 16, 18, 20, 37]: Recommended if you would use 2-step
-                  bootstrapping.
-          - Due to the characteristic of SD1.5 LCM LoRA, setting
-            `num_inference_steps` larger than 20 may results in overly blurry
-            and unrealistic images. Beware!
-
-        Args:
-            t_index_list (Optional[List[int]]): The specified scheduling step
-                regarding the maximum timestep as `num_inference_steps`, which
-                is by default, 50. That means that
-                `t_index_list=[0, 12, 25, 37]` is a relative time indices basd
-                on the full scale of 50. If None, reinitialize the module with
-                the default value.
-            num_inference_steps (Optional[int]): The maximum timestep of the
-                sampler. Defines relative scale of the `t_index_list`. Rarely
-                used in practice. If None, reinitialize the module with the
-                default value.
-        """
-        if t_index_list is None:
-            t_index_list = self.default_t_list
-        if num_inference_steps is None:
-            num_inference_steps = self.default_num_inference_steps
-
-        self.scheduler.set_timesteps(num_inference_steps)
-        self.timesteps = torch.as_tensor([
-            self.scheduler.timesteps[t] for t in t_index_list
-        ]).to(dtype=torch.long)
-
-        shape = (len(t_index_list), 1, 1, 1)
-
-        c_skip_list = []
-        c_out_list = []
-        for timestep in self.timesteps:
-            c_skip, c_out = self.scheduler.get_scalings_for_boundary_condition_discrete(timestep)
-            c_skip_list.append(c_skip)
-            c_out_list.append(c_out)
-        self.c_skip = torch.stack(c_skip_list).view(*shape).to(dtype=self.dtype, device=self.device)
-        self.c_out = torch.stack(c_out_list).view(*shape).to(dtype=self.dtype, device=self.device)
-
-        alpha_prod_t_sqrt_list = []
-        beta_prod_t_sqrt_list = []
-        for timestep in self.timesteps:
-            alpha_prod_t_sqrt = self.scheduler.alphas_cumprod[timestep].sqrt()
-            beta_prod_t_sqrt = (1 - self.scheduler.alphas_cumprod[timestep]).sqrt()
-            alpha_prod_t_sqrt_list.append(alpha_prod_t_sqrt)
-            beta_prod_t_sqrt_list.append(beta_prod_t_sqrt)
-        alpha_prod_t_sqrt = (torch.stack(alpha_prod_t_sqrt_list).view(*shape)
-            .to(dtype=self.dtype, device=self.device))
-        beta_prod_t_sqrt = (torch.stack(beta_prod_t_sqrt_list).view(*shape)
-            .to(dtype=self.dtype, device=self.device))
-        self.alpha_prod_t_sqrt = alpha_prod_t_sqrt
-        self.beta_prod_t_sqrt = beta_prod_t_sqrt
-
-        noise_lvs = (1 - self.scheduler.alphas_cumprod[self.timesteps].to(self.device)) ** 0.5
         self.noise_lvs = noise_lvs[None, :, None, None, None]
         self.next_noise_lvs = torch.cat([noise_lvs[1:], noise_lvs.new_zeros(1)])[None, :, None, None, None]
 
@@ -626,11 +564,14 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         Returns:
             A single string of text prompt.
         """
-        question = 'Question: What are in the image? Answer:'
-        inputs = self.i2t_processor(image, question, return_tensors='pt')
-        out = self.i2t_model.generate(**inputs, max_new_tokens=77)
-        prompt = self.i2t_processor.decode(out[0], skip_special_tokens=True).strip()
-        return prompt
+        if hasattr(self, 'i2t_model'):
+            question = 'Question: What are in the image? Answer:'
+            inputs = self.i2t_processor(image, question, return_tensors='pt')
+            out = self.i2t_model.generate(**inputs, max_new_tokens=77)
+            prompt = self.i2t_processor.decode(out[0], skip_special_tokens=True).strip()
+            return prompt
+        else:
+            return ''
 
     @torch.no_grad()
     def encode_imgs(
@@ -889,7 +830,29 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         masks = rearrange(masks.to(self.dtype), '(p t) () h w -> p t () h w', p=len(std))
         return masks, masks_blurred, std
 
-    def scheduler_step_lcm(
+    def scheduler_scale_model_input(
+        self,
+        latent: torch.FloatTensor,
+        idx: int,
+    ) -> torch.FloatTensor:
+        """
+        Ensures interchangeability with schedulers that need to scale the denoising model input depending on the
+        current timestep. Scales the denoising model input by `(sigma**2 + 1) ** 0.5` to match the Euler algorithm.
+
+        Args:
+            sample (`torch.FloatTensor`):
+                The input sample.
+            timestep (`int`, *optional*):
+                The current timestep in the diffusion chain.
+
+        Returns:
+            `torch.FloatTensor`:
+                A scaled input sample.
+        """
+        latent = latent / ((self.sigmas[idx]**2 + 1) ** 0.5)
+        return latent
+
+    def scheduler_step(
         self,
         noise_pred: torch.Tensor,
         idx: int,
@@ -910,26 +873,18 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         Returns:
             A denoised tensor with the same size as latent.
         """
-        F_theta = (latent - self.beta_prod_t_sqrt[idx] * noise_pred) / self.alpha_prod_t_sqrt[idx]
-        return self.c_out[idx] * F_theta + self.c_skip[idx] * latent
-
-    def scheduler_step(
-        self,
-        noise_pred: torch.Tensor,
-        idx: int,
-        latent: torch.Tensor,
-    ) -> torch.Tensor:
         # Upcast to avoid precision issues when computing prev_sample.
         latent = latent.to(torch.float32)
 
         # 1. Compute predicted original sample (x_0) from sigma-scaled predicted noise.
         assert self.scheduler.config.prediction_type == 'epsilon', 'Only supports `prediction_type` of `epsilon` for now.'
-        # pred_original_sample = sample - self.sigma_hats[idx] * model_output
+        # pred_original_sample = latent - self.sigma_hats[idx] * noise_pred
+        # prev_sample = pred_original_sample + noise_pred * (self.dt[i] + self.sigma_hats[i])
+        # return pred_original_sample.to(self.dtype)
 
         # 2. Convert to an ODE derivative.
-        derivative = noise_pred
-        prev_sample = latent + derivative * self.dt[idx]
-        return prev_sample
+        prev_sample = latent + noise_pred * self.dt[idx]
+        return prev_sample.to(self.dtype)
 
     def scheduler_add_noise(
         self,
@@ -955,213 +910,20 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             A noisy tensor with the same size as latent.
         """
         if initial:
-            if idx < len(self.sigma) and idx >= 0:
-                return latent + self.sigma[idx] * noise
+            if idx < len(self.sigmas) and idx >= 0:
+                noise = torch.randn_like(latent) if noise is None else noise
+                return latent + self.sigmas[idx] * noise
             else:
                 return latent
         else:
             # 3. Post-add noise.
             noise_lv = (self.sigma_hats[idx]**2 - self.sigmas[idx]**2) ** 0.5
-            if self.gammas[idx] > 0 and noise_lv > 0 and s_noise > 0 and idx < len(self.sigma) and idx >= 0:
+            if self.gammas[idx] > 0 and noise_lv > 0 and s_noise > 0 and idx < len(self.sigmas) and idx >= 0:
                 noise = torch.randn_like(latent) if noise is None else noise
-                print(s_noise * noise_lv)
                 eps = noise * s_noise * noise_lv
                 latent = latent + eps
                 # pred_original_sample = pred_original_sample + eps
             return latent
-
-#     def scheduler_add_noise(
-#         self,
-#         latent: torch.Tensor,
-#         noise: Optional[torch.Tensor],
-#         idx: int,
-#     ) -> torch.Tensor:
-#         r"""Separated noise-add step for the reverse diffusion scheduler.
-        
-#         Designed to match the interface of the original
-#         `pipe.scheduler.add_noise`.
-
-#         Args:
-#             latent (torch.Tensor): Denoised latent.
-#             noise (torch.Tensor): Added noise. Can be None. If None, a random
-#                 noise is newly sampled for addition.
-#             idx (int): Instead of timesteps (in [0, 1000]-scale) use indices
-#                 for the timesteps tensor (ranged in [0, len(timesteps)-1]).
-
-#         Returns:
-#             A noisy tensor with the same size as latent.
-#         """
-#         if idx >= len(self.alpha_prod_t_sqrt) or idx < 0:
-#             # The last step does not require noise addition.
-#             return latent
-#         noise = torch.randn_like(latent) if noise is None else noise
-#         return self.alpha_prod_t_sqrt[idx] * latent + self.beta_prod_t_sqrt[idx] * noise
-
-#     @torch.no_grad()
-#     def sample(
-#         self,
-#         prompts: Union[str, List[str]],
-#         negative_prompts: Union[str, List[str]] = '',
-#         height: int = 1024,
-#         width: int = 1024,
-#         num_inference_steps: Optional[int] = None,
-#         guidance_scale: Optional[float] = None,
-#         batch_size: int = 1,
-#     ) -> Image.Image:
-#         r"""StableDiffusionPipeline for single-prompt single-tile generation.
-
-#         Minimal Example:
-#             >>> device = torch.device('cuda:0')
-#             >>> smd = StableMultiDiffusionPipeline(device)
-#             >>> image = smd.sample('A photo of the dolomites')
-#             >>> image.save('my_creation.png')
-
-#         Args:
-#             prompts (Union[str, List[str]]): A text prompt.
-#             negative_prompts (Union[str, List[str]]): A negative text prompt.
-#             height (int): Height of a generated image.
-#             width (int): Width of a generated image.
-#             num_inference_steps (Optional[int]): Number of inference steps.
-#                 Default inference scheduling is used if none is specified.
-#             guidance_scale (Optional[float]): Classifier guidance scale.
-#                 Default value is used if none is specified.
-#             batch_size (int): Number of images to generate.
-
-#         Returns: A PIL.Image image.
-#         """
-#         if num_inference_steps is None:
-#             num_inference_steps = self.default_num_inference_steps
-#         if guidance_scale is None:
-#             guidance_scale = self.default_guidance_scale
-#         self.scheduler.set_timesteps(num_inference_steps)
-
-#         if isinstance(prompts, str):
-#             prompts = [prompts]
-#         if isinstance(negative_prompts, str):
-#             negative_prompts = [negative_prompts]
-
-#         # Calculate text embeddings.
-#         uncond_embeds, text_embeds = self.get_text_embeds(prompts, negative_prompts)  # [2, 77, 1024]
-#         text_embeds = torch.cat([uncond_embeds.mean(dim=0, keepdim=True), text_embeds.mean(dim=0, keepdim=True)])
-#         h = height // self.vae_scale_factor
-#         w = width // self.vae_scale_factor
-#         latent = torch.randn((batch_size, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
-
-#         with torch.autocast('cuda'):
-#             for i, t in enumerate(tqdm(self.scheduler.timesteps)):
-#                 # Expand the latents if we are doing classifier-free guidance.
-#                 latent_model_input = torch.cat([latent] * 2)
-
-#                 # Perform one step of the reverse diffusion.
-#                 noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeds)['sample']
-#                 noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
-#                 noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
-#                 latent = self.scheduler.step(noise_pred, t, latent)['prev_sample']
-
-#         # Return PIL Image.
-#         latent = latent.to(dtype=self.dtype)
-#         imgs = [T.ToPILImage()(self.decode_latents(l[None])[0]) for l in latent]
-#         return imgs
-
-#     @torch.no_grad()
-#     def sample_panorama(
-#         self,
-#         prompts: Union[str, List[str]],
-#         negative_prompts: Union[str, List[str]] = '',
-#         height: int = 1024,
-#         width: int = 4096,
-#         num_inference_steps: Optional[int] = None,
-#         guidance_scale: Optional[float] = None,
-#         tile_size: Optional[int] = None,
-#     ) -> Image.Image:
-#         r"""Large size image generation from a single set of prompts.
-
-#         Minimal Example:
-#             >>> device = torch.device('cuda:0')
-#             >>> smd = StableMultiDiffusionPipeline(device)
-#             >>> image = smd.sample_panorama(
-#             >>>     'A photo of Alps', height=1024, width=6144)
-#             >>> image.save('my_panorama_creation.png')
-
-#         Args:
-#             prompts (Union[str, List[str]]): A text prompt.
-#             negative_prompts (Union[str, List[str]]): A negative text prompt.
-#             height (int): Height of a generated image. It is tiled if larger
-#                 than `tile_size`.
-#             width (int): Width of a generated image. It is tiled if larger
-#                 than `tile_size`.
-#             num_inference_steps (Optional[int]): Number of inference steps.
-#                 Default inference scheduling is used if none is specified.
-#             guidance_scale (Optional[float]): Classifier guidance scale.
-#                 Default value is used if none is specified.
-#             tile_size (Optional[int]): Tile size of the panorama generation.
-#                 Works best with the default training size of the Stable-
-#                 Diffusion model, i.e., 1024 or 1024 for SD1.5 and 1024 for SDXL.
-
-#         Returns: A PIL.Image image of a panorama (large-size) image.
-#         """
-#         if num_inference_steps is None:
-#             num_inference_steps = self.default_num_inference_steps
-#             self.scheduler.set_timesteps(num_inference_steps)
-#             timesteps = self.timesteps
-#             use_custom_timesteps = False
-#         else:
-#             self.scheduler.set_timesteps(num_inference_steps)
-#             timesteps = self.scheduler.timesteps
-#             use_custom_timesteps = True
-#         if guidance_scale is None:
-#             guidance_scale = self.default_guidance_scale
-
-#         if isinstance(prompts, str):
-#             prompts = [prompts]
-#         if isinstance(negative_prompts, str):
-#             negative_prompts = [negative_prompts]
-
-#         # Calculate text embeddings.
-#         uncond_embeds, text_embeds = self.get_text_embeds(prompts, negative_prompts)  # [2, 77, 1024]
-#         text_embeds = torch.cat([uncond_embeds.mean(dim=0, keepdim=True), text_embeds.mean(dim=0, keepdim=True)])
-
-#         # Define panorama grid and get views
-#         h = height // self.vae_scale_factor
-#         w = width // self.vae_scale_factor
-#         latent = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
-
-#         if tile_size is None:
-#             tile_size = min(min(height, width), 1024)
-#         views, masks = get_panorama_views(h, w, tile_size // self.vae_scale_factor)
-#         masks = masks.to(dtype=self.dtype, device=self.device)
-#         value = torch.zeros_like(latent)
-#         with torch.autocast('cuda'):
-#             for i, t in enumerate(tqdm(timesteps)):
-#                 value.zero_()
-
-#                 for j, (h_start, h_end, w_start, w_end) in enumerate(views):
-#                     # TODO we can support batches, and pass multiple views at once to the unet
-#                     latent_view = latent[:, :, h_start:h_end, w_start:w_end]
-
-#                     # Expand the latents if we are doing classifier-free guidance.
-#                     latent_model_input = torch.cat([latent_view] * 2)
-
-#                     # Perform one step of the reverse diffusion.
-#                     noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeds)['sample']
-#                     noise_pred_uncond, noise_pred_cond = noise_pred.chunk(2)
-#                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
-
-#                     # Compute the denoising step.
-#                     latents_view_denoised = self.scheduler_step(noise_pred, i, latent_view) # (1, 4, h, w)
-#                     mask = masks[..., j:j + 1, h_start:h_end, w_start:w_end] # (1, 1, h, w)
-#                     value[..., h_start:h_end, w_start:w_end] += mask * latents_view_denoised # (1, 1, h, w)
-
-#                 # Update denoised latent.
-#                 latent = value.clone()
-
-#                 if i < len(timesteps) - 1:
-#                     latent = self.scheduler_add_noise(latent, None, i + 1)
-
-#         # Return PIL Image.
-#         imgs = self.decode_latents(latent)
-#         img = T.ToPILImage()(imgs[0].cpu())
-#         return img
 
     @torch.no_grad()
     def __call__(
@@ -1496,7 +1258,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             prompt_embeds = prompt_embeds.repeat(num_masks, 1, 1)
             if negative_prompt_embeds is not None:
                 negative_prompt_embeds = negative_prompt_embeds.repeat(num_masks, 1, 1)
-        print(prompt_embeds.abs().max(), prompt_embeds.view(-1).std(), prompt_embeds.view(-1).mean())
 
         # SDXL pipeline settings.
         if do_classifier_free_guidance:
@@ -1514,9 +1275,10 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
         # Latent initialization.
         if self.timesteps[0] < 999 and has_background:
-            latents = self.scheduler_add_noise(bg_latents, None, 0)
+            latents = self.scheduler_add_noise(bg_latents, None, 0, initial=True)
         else:
             latents = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
+            latents = latents * self.scheduler.init_noise_sigma
 
         # Tiling (if needed).
         if height > tile_size or width > tile_size:
@@ -1533,11 +1295,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             for i, t in enumerate(tqdm(self.timesteps)):
                 fg_mask = fg_masks[:, i]
                 bg_mask = bg_masks[i:i + 1]
-
-#                 cosine_factor = 0.5 * (1 + torch.cos(torch.pi * (self.scheduler.config.num_train_timesteps - t) / self.scheduler.config.num_train_timesteps)).cpu()
-
-#                 c1 = cosine_factor ** cosine_scale_1
-#                 latents = latents * (1 - c1) + noise_latents[i] * c1
 
                 value.zero_()
                 count_all.zero_()
@@ -1557,19 +1314,24 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                         # Treat the first foreground latent as the background latent if one does not exist.
                         bg_latents_ = bg_latents[..., h_start:h_end, w_start:w_end] if has_background else latents_[:1]
                         white_ = white[..., h_start:h_end, w_start:w_end]
+                        white_ = self.scheduler_add_noise(white_, None, i, initial=True)
                         bg_latents_ = mix_ratio * white_ + (1.0 - mix_ratio) * bg_latents_
-                        bg_latents_ = self.scheduler_add_noise(bg_latents_, None, i)
                         latents_ = (1.0 - fg_mask_) * bg_latents_ + fg_mask_ * latents_
 
                         # Centering.
                         latents_ = shift_to_mask_bbox_center(latents_, fg_mask_, reverse=True)
 
+                    latent_model_input = torch.cat([latents_] * 2) if do_classifier_free_guidance else latents_
+                    latent_model_input = self.scheduler_scale_model_input(latent_model_input, i)
+
                     # Perform one step of the reverse diffusion.
                     added_cond_kwargs = {"text_embeds": add_text_embeds, "time_ids": add_time_ids_input}
                     noise_pred = self.unet(
-                        torch.cat([latents_] * 2) if do_classifier_free_guidance else latents_,
+                        latent_model_input,
                         t,
                         encoder_hidden_states=prompt_embeds,
+                        timestep_cond=None,
+                        cross_attention_kwargs=None,
                         added_cond_kwargs=added_cond_kwargs,
                         return_dict=False,
                     )[0]
@@ -1639,8 +1401,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             image = latents
 
         # Return PIL Image.
-        # image = self.decode_latents(latents.to(dtype=self.dtype))[0]
-        image = image[0]
+        image = image[0].clip_(-1, 1) * 0.5 + 0.5
         if has_background and do_blend:
             fg_mask = torch.sum(masks_g, dim=0).clip_(0, 1)
             image = blend(image, background[0], fg_mask)

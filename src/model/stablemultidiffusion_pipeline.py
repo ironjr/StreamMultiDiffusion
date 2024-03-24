@@ -133,10 +133,6 @@ class StableMultiDiffusionPipeline(nn.Module):
                 model_key = 'runwayml/stable-diffusion-v1-5'
             lora_key = 'latent-consistency/lcm-lora-sdv1-5'
             lora_weight_name = 'pytorch_lora_weights.safetensors'
-        # elif self.sd_version == 'xl':
-        #     model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
-        #     lora_key = 'latent-consistency/lcm-lora-sdxl'
-        #     lora_weight_name = 'pytorch_lora_weights.safetensors'
         else:
             raise ValueError(f'Stable Diffusion version {self.sd_version} not supported.')
 
