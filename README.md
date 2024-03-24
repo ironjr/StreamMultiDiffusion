@@ -90,6 +90,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 ## 🚩 Updates
 
 - 🏃 More public demos are expected!
+- 🔥 March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
 - 🔥 March 22, 2024: Our demo app _Semantic Palette_ is now available on [Google Colab](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)! Huge thanks to [@camenduru](https://github.com/camenduru)!
 - 🔥 March 22, 2024: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "your model here"` to run the app from your local machine.
 - 🔥 March 19, 2024: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
@@ -604,9 +605,18 @@ cd src/demo/stream
 python app.py [other options]
 ```
 
+#### Run with `.safetensors`
+
+We now support `.safetensors` type local models.
+You can run the demo app with your favorite checkpoint models as follows:
+1. Save `<your model>.safetensors` or a [symbolic link](https://mangohost.net/blog/what-is-the-linux-equivalent-to-symbolic-links-in-windows/) to the actual file to `demo/stream/checkpoints`.
+2. Run the demo with your model loaded with `python app.py --model <your model>.safetensors`
+
+Done!
+
 #### Other options
 
-- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Both Hugging Face model repository / local safetensor types are supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"` or `--model "realcartoonPixar_v6.safetensors"` Please note that safetensors models should reside in `src/demo/stream/checkpoints`!
 - `--height` (`-H`): Optional. Height of the canvas. Default: 768.
 - `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
 - `--display_col`: Optional. Number of displays in a row. Useful for buffering the old frames. Default: 2.
@@ -661,9 +671,18 @@ cd src/demo/semantic_palette
 python app.py [other options]
 ```
 
+#### Run with `.safetensors`
+
+We now support `.safetensors` type local models.
+You can run the demo app with your favorite checkpoint models as follows:
+1. Save `<your model>.safetensors` or a [symbolic link](https://mangohost.net/blog/what-is-the-linux-equivalent-to-symbolic-links-in-windows/) to the actual file to `demo/semantic_palette/checkpoints`.
+2. Run the demo with your model loaded with `python app.py --model <your model>.safetensors`
+
+Done!
+
 #### Other options
 
-- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Hugging Face model repository supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"`
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Both Hugging Face model repository / local safetensor types are supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"` or `--model "realcartoonPixar_v6.safetensors"` Please note that safetensors models should reside in `src/demo/semantic_palette/checkpoints`!
 - `--height` (`-H`): Optional. Height of the canvas. Default: 768.
 - `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
 - `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
