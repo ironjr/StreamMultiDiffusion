@@ -358,6 +358,10 @@ These are the currently known SDXL-Lightning-specific issues compared to SD1.5 m
 | :----------------------------: | :----------------------------: |
 | Semantic Brush Input | Generated Image (12 sec) |
 
+<p align="center">
+    1024x1024 image generated with <a href="https://huggingface.co/ByteDance/SDXL-Lightning">SDXL-Lightning LoRA</a> and <a href="https://huggingface.co/cagliostrolab/animagine-xl-3.1">Animagine XL 3.1</a> checkpoint.
+</p>
+
 **Code:**
 
 ```python
