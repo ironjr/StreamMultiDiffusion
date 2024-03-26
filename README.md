@@ -108,6 +108,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ```bash
 conda create -n smd python=3.10 && conda activate smd
+git clone https://github.com/ironjr/StreamMultiDiffusion
 pip install -r requirements.txt
 ```
 
@@ -115,17 +116,32 @@ pip install -r requirements.txt
 
 ### Overview
 
-StreamMultiDiffusion is served in three different forms.
+StreamMultiDiffusion is served in serveral different forms.
 
-1. The main interactive demo powered by Gradio is available at `src/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
+1. The main GUI demo powered by Gradio is available at `demo/stream/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --width 512 --port 8000
+cd demo/stream
+python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --width 512 --port 8000
 ```
 
-2. Jupyter Lab demos are available in the `notebooks` directory. Simply type `jupyter lab` in the command prompt will open a Jupyter server.
+2. The GUI demo _Semantic Palette_ for _SD1.5_ checkpoints is available at `demo/semantic_palette/app.py`. The public version can be found at [![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SD1.5-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette) and at [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb).
 
-3. Command line prompts by importing the `model` in `src`. For detailed examples and interfaces, please see the Jupyter demos.
+```bash
+cd demo/semantic_palette
+python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --width 512 --port 8000
+```
+
+3. The GUI demo _Semantic Palette_ for _SDXL_ checkpoints is available at `demo/semantic_palette_sdxl/app.py`. The public version can be found at [![HFDemo2](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SDXL-yellow)](https://huggingface.co/spaces/ironjr/SemanticPaletteXL).
+
+```bash
+cd demo/semantic_palette_sdxl
+python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --width 512 --port 8000
+```
+
+4. Jupyter Lab demos are available in the `notebooks` directory. Simply type `jupyter lab` in the command prompt will open a Jupyter server.
+
+5. As a python library by importing the `model` in `src`. For detailed examples and interfaces, please see the Usage section below.
 
 
 
@@ -867,6 +883,13 @@ The interface is summarized in the image below ⬇️:
 **Semantic palette** basically means that you paint things with semantics, i.e., text prompts, just like how you may use brush tools in commercial image editing software, such as Adobe Photoshop, etc.
 Our acceleration technique for region-based controlled image generation allows users to edit their prompt masks similarly to drawing.
 We couldn't find a good preexisting name for this type of user interface, so we named it as _semantic palette_, hoping for it to make sense to you. 😄
+
+### Can it run realistic models / anime-style models?
+
+Of course. Both types of models are supported.
+For realistic models and SDXL-type models, using `--bootstrap_steps=2` or `3` produces better (non-cropped) images.
+
+https://github.com/ironjr/StreamMultiDiffusion/assets/12259041/9a6bb02b-7dca-4dd0-a1bc-6153dde1571d
 
 
 ## 🌏 Citation
