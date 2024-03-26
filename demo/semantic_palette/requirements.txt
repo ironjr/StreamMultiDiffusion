@@ -5,7 +5,7 @@ einops
 diffusers
 transformers
 huggingface_hub[torch]
-gradio
+gradio==4.21.0
 Pillow
 emoji
 numpy
