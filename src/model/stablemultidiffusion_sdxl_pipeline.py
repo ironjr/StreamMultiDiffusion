@@ -55,7 +55,7 @@ from typing import Tuple, List, Literal, Optional, Union
 from tqdm import tqdm
 from PIL import Image
 
-from util import gaussian_lowpass, blend, get_panorama_views, shift_to_mask_bbox_center
+from util import load_model, gaussian_lowpass, blend, get_panorama_views, shift_to_mask_bbox_center
 
 
 # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.rescale_noise_cfg
@@ -170,7 +170,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             model_key = hf_key
             lora_ckpt = 'sdxl_lightning_4step_lora.safetensors'
 
-            self.pipe = StableDiffusionXLPipeline.from_pretrained(model_key, variant=variant, torch_dtype=self.dtype).to(self.device)
+            self.pipe = load_model(model_key, 'xl', self.device, self.dtype)
             self.pipe.load_lora_weights(hf_hub_download(lightning_repo, lora_ckpt), adapter_name='lightning')
             self.pipe.set_adapters(["lightning"], adapter_weights=[lora_weight])
             self.pipe.fuse_lora()
