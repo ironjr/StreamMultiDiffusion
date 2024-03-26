@@ -75,7 +75,7 @@ parser = argparse.ArgumentParser(description='Semantic Palette demo powered by S
 parser.add_argument('-H', '--height', type=int, default=1024)
 parser.add_argument('-W', '--width', type=int, default=2560)
 parser.add_argument('--model', type=str, default=None, help='Hugging face model repository or local path for a SD1.5 model checkpoint to run.')
-parser.add_argument('--bootstrap_steps', type=int, default=1)
+parser.add_argument('--bootstrap_steps', type=int, default=2)
 parser.add_argument('--seed', type=int, default=-1)
 parser.add_argument('--device', type=int, default=0)
 parser.add_argument('--port', type=int, default=8000)
@@ -526,11 +526,19 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             </a>
             &nbsp;
             <a href='https://huggingface.co/papers/2403.09055'>
-                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Paper-StreamMultiDiffusion-yellow'>
             </a>
             &nbsp;
             <a href='https://huggingface.co/spaces/ironjr/SemanticPalette'>
-                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-yellow'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SD1.5-yellow'>
+            </a>
+            &nbsp;
+            <a href='https://huggingface.co/spaces/ironjr/SemanticPaletteXL'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SDXL-yellow'>
+            </a>
+            &nbsp;
+            <a href='https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb'>
+                <img src='https://colab.research.google.com/assets/colab-badge.svg'>
             </a>
         </div>
     </div>

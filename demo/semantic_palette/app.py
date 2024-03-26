@@ -530,16 +530,20 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
                 <img src='https://img.shields.io/twitter/url?label=_ironjr_&url=https%3A%2F%2Ftwitter.com%2F_ironjr_'>
             </a>
             &nbsp;
-            <a href='https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE'>
-                <img src='https://img.shields.io/badge/license-MIT-lightgrey'>
-            </a>
-            &nbsp;
             <a href='https://huggingface.co/papers/2403.09055'>
-                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Paper-StreamMultiDiffusion-yellow'>
             </a>
             &nbsp;
             <a href='https://huggingface.co/spaces/ironjr/SemanticPalette'>
-                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-yellow'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SD1.5-yellow'>
+            </a>
+            &nbsp;
+            <a href='https://huggingface.co/spaces/ironjr/SemanticPaletteXL'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SDXL-yellow'>
+            </a>
+            &nbsp;
+            <a href='https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb'>
+                <img src='https://colab.research.google.com/assets/colab-badge.svg'>
             </a>
         </div>
     </div>
