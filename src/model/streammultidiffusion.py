@@ -64,6 +64,7 @@ class StreamMultiDiffusion(nn.Module):
         preprocess_mask_cover_alpha: float = 0.3, # TODO
         prompt_queue_capacity: int = 256,
         mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'continuous',
+        use_xformers: bool = True,
     ) -> None:
         super().__init__()
 
@@ -148,7 +149,8 @@ class StreamMultiDiffusion(nn.Module):
             lora_scale=1.0,
             safe_fusing=False,
         )
-        self.pipe.enable_xformers_memory_efficient_attention()
+        if use_xformers:
+            self.pipe.enable_xformers_memory_efficient_attention()
 
         self.vae = (
             AutoencoderTiny.from_pretrained('madebyollin/taesd').to(device=self.device, dtype=self.dtype)

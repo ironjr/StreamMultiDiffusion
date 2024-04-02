@@ -1,9 +1,9 @@
-torch==2.0.1
+torch
 torchvision
-xformers==0.0.22
+xformers==0.0.24
 einops
 diffusers
-transformers==4.39.1
+transformers
 huggingface_hub[torch]
 Pillow
 emoji
@@ -11,7 +11,13 @@ numpy
 tqdm
 jupyterlab
 gradio==4.21.0
-peft==0.10.0
+peft
 fire
 accelerate
 cuda-python==11.8.3
+onnx==1.15.0
+onnxruntime==1.16.3
+protobuf==3.20.2
+-i https://pypi.ngc.nvidia.com
+onnx-graphsurgeon==0.3.26
+polygraphy==0.47.1
