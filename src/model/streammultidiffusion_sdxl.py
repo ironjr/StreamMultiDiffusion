@@ -76,7 +76,7 @@ class StreamMultiDiffusionSDXL(nn.Module):
         bootstrap_steps: int = 1,
         bootstrap_mix_steps: float = 1.0,
         # bootstrap_leak_sensitivity: float = 0.2,
-        preprocess_mask_cover_alpha: float = 0.3, # TODO
+        preprocess_mask_cover_alpha: float = 0.1, # TODO
         prompt_queue_capacity: int = 256,
         mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'continuous',
         lora_weight: float = 1.0,
