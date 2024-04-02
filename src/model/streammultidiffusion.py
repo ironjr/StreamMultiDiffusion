@@ -155,9 +155,7 @@ class StreamMultiDiffusion(nn.Module):
             if use_tiny_vae else self.pipe.vae
         )
         # self.tokenizer = self.pipe.tokenizer
-        # self.text_encoder = self.pipe.text_encoder
-        # self.tokenizer_2 = self.pipe.tokenizer_2 if hasattr(self.pipe, 'tokenizer_2') else None
-        # self.text_encoder_2 = self.pipe.text_encoder_2 if hasattr(self.pipe, 'text_encoder_2') else None
+        self.text_encoder = self.pipe.text_encoder
         self.unet = self.pipe.unet
         self.vae_scale_factor = self.pipe.vae_scale_factor
 
