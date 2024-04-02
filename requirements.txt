@@ -14,4 +14,4 @@ gradio==4.21.0
 peft==0.10.0
 fire
 accelerate
-python-cuda==11.8.3
+cuda-python==11.8.3
