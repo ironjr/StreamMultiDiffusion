@@ -175,7 +175,7 @@ class StreamMultiDiffusionSDXL(nn.Module):
         self.i2t_model = Blip2ForConditionalGeneration.from_pretrained('Salesforce/blip2-opt-2.7b')
 
         self.vae = (
-            AutoencoderTiny.from_pretrained('madebyollin/taesd').to(device=self.device, dtype=self.dtype)
+            AutoencoderTiny.from_pretrained('madebyollin/taesdxl').to(device=self.device, dtype=self.dtype)
             if use_tiny_vae else self.pipe.vae
         )
         # self.tokenizer = self.pipe.tokenizer
