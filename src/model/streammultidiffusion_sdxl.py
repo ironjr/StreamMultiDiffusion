@@ -80,6 +80,8 @@ class StreamMultiDiffusionSDXL(nn.Module):
         prompt_queue_capacity: int = 256,
         mask_type: Literal['discrete', 'semi-continuous', 'continuous'] = 'continuous',
         lora_weight: float = 1.0,
+        i2t_to_device: bool = False,
+        use_xformers: bool = True,
     ) -> None:
         super().__init__()
 
@@ -160,7 +162,8 @@ class StreamMultiDiffusionSDXL(nn.Module):
             unet = UNet2DConditionModel.from_config(model_key, subfolder='unet').to(self.device, self.dtype)
             unet.load_state_dict(load_file(hf_hub_download(lightning_repo, model_ckpt), device=self.device))
             self.pipe = StableDiffusionXLPipeline.from_pretrained(model_key, unet=unet, torch_dtype=self.dtype, variant=variant).to(self.device)
-        self.pipe.enable_xformers_memory_efficient_attention()
+        if use_xformers:
+            self.pipe.enable_xformers_memory_efficient_attention()
 
         ### Internally stored "Session" states
 
@@ -173,6 +176,9 @@ class StreamMultiDiffusionSDXL(nn.Module):
         # Create model
         self.i2t_processor = Blip2Processor.from_pretrained('Salesforce/blip2-opt-2.7b')
         self.i2t_model = Blip2ForConditionalGeneration.from_pretrained('Salesforce/blip2-opt-2.7b')
+        if i2t_to_device:
+            self.i2t_processor = self.i2t_processor.to(device)
+            self.i2t_model = self.self.i2t_model.to(device)
 
         self.vae = (
             AutoencoderTiny.from_pretrained('madebyollin/taesdxl').to(device=self.device, dtype=self.dtype)
@@ -410,7 +416,7 @@ class StreamMultiDiffusionSDXL(nn.Module):
         """
         question = 'Question: What are in the image? Answer:'
         inputs = self.i2t_processor(image, question, return_tensors='pt')
-        out = self.i2t_model.generate(**inputs, max_new_tokens=77)
+        out = self.i2t_model.generate(**inputs) #, max_new_tokens=77)
         prompt = self.i2t_processor.decode(out[0], skip_special_tokens=True).strip()
         return prompt
 
