@@ -1,0 +1,13 @@
+torch==2.0.1
+torchvision
+xformers==0.0.22
+einops
+diffusers
+transformers
+huggingface_hub[torch]
+Pillow
+emoji
+numpy
+tqdm
+jupyterlab
+gradio @ https://gradio-builds.s3.amazonaws.com/7129aa5719aaa95a75397a83d3e1f3b72adf8050/gradio-4.26.0-py3-none-any.whl

@@ -724,7 +724,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
                 iface.slider_seed = gr.Slider(
                     label='Seed',
-                    minimum=1,
+                    minimum=0,
                     maximum=2147483647,
                     step=1,
                     value=opt.seed,

@@ -1,0 +1,504 @@
+/*
+Svg Projects
+Author: Jonathan Trancozo
+Language: HTML, CSS3 and SVG
+Project_version: V1
+Project_description: 
+[pt-br]
+Por anos eu vi essa imagem e pensava “Isso ficaria bem massa animado” e hoje consegui expressar um pouco da minha imaginação.
+O desenho foi produzido no Adobe Illustrator e exportado em SVG. As animações foram feitas com CSS3 usando principalmente [transform].
+
+Até uma próxima.
+      
+
+[en]
+For years I saw this picture and thought "That would be amazing animated " and today I managed to express some of my imagination.
+The design was produced in Adobe Illustrator and export in SVG . The animations were made with CSS3 using mainly [ transform ].
+
+See you.
+
+*/
+
+html {
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+
+#deadline {
+    width:581px;
+    max-width: 100%;
+    height:158px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1;
+    transform: translate(-50%, -50%);
+}
+
+#deadline svg {
+    width: 100%;
+}
+
+#progress-time-fill {
+    -webkit-animation-name: progress-fill;
+            animation-name: progress-fill; 
+    -webkit-animation-timing-function: linear; 
+            animation-timing-function: linear; 
+    -webkit-animation-iteration-count: infinite; 
+            animation-iteration-count: infinite;
+}
+
+/* Death */
+#death-group {
+    -webkit-animation-name: walk;
+            animation-name: walk;
+    -webkit-animation-timing-function: ease;
+            animation-timing-function: ease; 
+    -webkit-animation-iteration-count: infinite; 
+            animation-iteration-count: infinite;
+    transform: translateX(0);
+}
+
+#death-arm {
+    -webkit-animation: move-arm 3s ease infinite;
+            animation: move-arm 3s ease infinite;
+    /* transform-origin: left center; */
+    transform-origin: -60px 74px;
+}
+
+#death-tool {
+    -webkit-animation: move-tool 3s ease infinite;
+            animation: move-tool 3s ease infinite;
+    transform-origin: -48px center;
+}
+
+/* Designer */
+
+#designer-arm-grop {
+    -webkit-animation: write 1.5s ease infinite;
+            animation: write 1.5s ease infinite;
+    transform: translate(0, 0) rotate(0deg) scale(1, 1);
+    transform-origin: 90% top;
+}
+
+.deadline-timer {
+    color: #fff;
+    text-align: center;
+    width: 200px;
+    margin: 0 auto;
+    position: relative;
+    height: 40px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 18pt;
+    margin-top: -90px;
+}
+
+.deadline-timer .inner {
+    width: 200px;
+    position: relative;
+    top: 0;
+    left: 0;
+}
+
+.mask-red,
+.mask-white {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    overflow: hidden;
+    height: 100%;
+}
+
+@-webkit-keyframes progress-fill {
+    0% {
+        x: -100%;
+    }
+
+    100% {
+        x: -3%;
+    }
+}
+
+@keyframes progress-fill {
+    0% {
+        x: -100%;
+    }
+
+    100% {
+        x: -3%;
+    }
+}
+
+@-webkit-keyframes walk {
+    0% {
+        transform: translateX(0);
+    }
+    6% {
+        transform: translateX(0);
+    }
+    10% {
+        transform: translateX(100px);
+    },
+
+    15% {
+        transform: translateX(140px);
+    }
+
+    25% {
+        transform: translateX(170px);
+    }
+
+    35% {
+        transform: translateX(220px);
+    }
+
+    45% {
+        transform: translateX(280px);
+    }
+
+    55% {
+        transform: translateX(340px);
+    }
+
+    65% {
+        transform: translateX(370px);
+    }
+
+    75% {
+        transform: translateX(430px);
+    }
+
+    85% {
+        transform: translateX(460px);
+    }
+
+    100% {
+        transform: translateX(520px);
+    }
+}
+
+@keyframes walk {
+    0% {
+        transform: translateX(0);
+    }
+    6% {
+        transform: translateX(0);
+    }
+    10% {
+        transform: translateX(100px);
+    },
+
+    15% {
+        transform: translateX(140px);
+    }
+
+    25% {
+        transform: translateX(170px);
+    }
+
+    35% {
+        transform: translateX(220px);
+    }
+
+    45% {
+        transform: translateX(280px);
+    }
+
+    55% {
+        transform: translateX(340px);
+    }
+
+    65% {
+        transform: translateX(370px);
+    }
+
+    75% {
+        transform: translateX(430px);
+    }
+
+    85% {
+        transform: translateX(460px);
+    }
+
+    100% {
+        transform: translateX(520px);
+    }
+}
+
+@-webkit-keyframes move-arm {
+    0% {
+        transform: rotate(0);
+    }
+
+    5% {
+        transform: rotate(0);
+    }
+
+    9% {
+        transform: rotate(40deg);
+    }
+
+    80% {
+        transform: rotate(0);
+    }
+}
+
+@keyframes move-arm {
+    0% {
+        transform: rotate(0);
+    }
+
+    5% {
+        transform: rotate(0);
+    }
+
+    9% {
+        transform: rotate(40deg);
+    }
+
+    80% {
+        transform: rotate(0);
+    }
+}
+
+@-webkit-keyframes move-tool {
+    0% {
+        transform: rotate(0);
+    }
+
+    5% {
+        transform: rotate(0);
+    }
+
+    9% {
+        transform: rotate(50deg);
+    }
+
+    80% {
+        transform: rotate(0);
+    }
+}
+
+@keyframes move-tool {
+    0% {
+        transform: rotate(0);
+    }
+
+    5% {
+        transform: rotate(0);
+    }
+
+    9% {
+        transform: rotate(50deg);
+    }
+
+    80% {
+        transform: rotate(0);
+    }
+}
+
+/* Design animations */
+
+@-webkit-keyframes write {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1, 1);
+    }
+
+    16% {
+        transform: translate(0px, 0px) rotate(5deg) scale(0.8, 1);
+    }
+
+    32% {
+        transform: translate(0px, 0px) rotate(0deg) scale(1, 1);
+    }
+
+    48% {
+        transform: translate(0px, 0px) rotate(6deg) scale(0.8, 1);
+    }
+
+    65% {
+        transform: translate(0px, 0px) rotate(0deg) scale(1, 1);
+    }
+
+    83% {
+        transform: translate(0px, 0px) rotate(4deg) scale(0.8, 1);
+    }
+}
+
+@keyframes write {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1, 1);
+    }
+
+    16% {
+        transform: translate(0px, 0px) rotate(5deg) scale(0.8, 1);
+    }
+
+    32% {
+        transform: translate(0px, 0px) rotate(0deg) scale(1, 1);
+    }
+
+    48% {
+        transform: translate(0px, 0px) rotate(6deg) scale(0.8, 1);
+    }
+
+    65% {
+        transform: translate(0px, 0px) rotate(0deg) scale(1, 1);
+    }
+
+    83% {
+        transform: translate(0px, 0px) rotate(4deg) scale(0.8, 1);
+    }
+}
+
+@-webkit-keyframes text-red {
+    0% {
+        width: 0%;
+    }
+
+    100% {
+        width: 98%;
+    }
+}
+
+@keyframes text-red {
+    0% {
+        width: 0%;
+    }
+
+    100% {
+        width: 98%;
+    }
+}
+
+/* Flames */
+
+/* @keyframes show-flames {
+    0% {
+        transform:  translateY(0);
+    }
+    74% {
+        transform:  translateY(0);
+    }
+    80% {
+        transform:  translateY(-30px);
+    }
+    97% {
+        transform:  translateY(-30px);
+    }
+    100% {
+        transform: translateY(0px);
+    }
+} */
+
+@-webkit-keyframes show-flames {
+    0% {
+        opacity: 0;
+    }
+    74% {
+        opacity: 0;
+    }
+    80% {
+        opacity: 1;
+    }
+    99% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes show-flames {
+    0% {
+        opacity: 0;
+    }
+    74% {
+        opacity: 0;
+    }
+    80% {
+        opacity: 1;
+    }
+    99% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@-webkit-keyframes red-flame {
+    0% {
+        transform: translateY(-30px) scale(1, 1);
+    }
+
+    25% {
+        transform: translateY(-30px) scale(1.1, 1.1);
+    }
+
+    75% {
+        transform: translateY(-30px) scale(0.8, 0.7); 
+    }
+
+    100% {
+        transform: translateY(-30px) scale(1, 1); 
+    }
+}
+
+@keyframes red-flame {
+    0% {
+        transform: translateY(-30px) scale(1, 1);
+    }
+
+    25% {
+        transform: translateY(-30px) scale(1.1, 1.1);
+    }
+
+    75% {
+        transform: translateY(-30px) scale(0.8, 0.7); 
+    }
+
+    100% {
+        transform: translateY(-30px) scale(1, 1); 
+    }
+}
+
+@-webkit-keyframes yellow-flame {
+    0% {
+        transform: translateY(-30px) scale(0.8, 0.7);
+    }
+
+    50% {
+        transform: translateY(-30px) scale(1.1, 1.2);
+    }
+
+    100% {
+        transform: translateY(-30px) scale(1, 1);
+    }
+}
+
+@keyframes yellow-flame {
+    0% {
+        transform: translateY(-30px) scale(0.8, 0.7);
+    }
+
+    50% {
+        transform: translateY(-30px) scale(1.1, 1.2);
+    }
+
+    100% {
+        transform: translateY(-30px) scale(1, 1);
+    }
+}
