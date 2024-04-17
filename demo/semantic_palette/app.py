@@ -99,8 +99,9 @@ else:
         opt.model = os.path.abspath(os.path.join('checkpoints', opt.model))
     model_dict = {os.path.splitext(os.path.basename(opt.model))[0]: opt.model}
 
+dtype = torch.float32 if device == 'cpu' else torch.float16
 models = {
-    k: StableMultiDiffusionPipeline(device, sd_version='1.5', hf_key=v, has_i2t=False)
+    k: StableMultiDiffusionPipeline(device, dtype=dtype, sd_version='1.5', hf_key=v, has_i2t=False)
     for k, v in model_dict.items()
 }
 
