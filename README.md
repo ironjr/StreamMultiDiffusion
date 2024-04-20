@@ -102,7 +102,6 @@ We are very open to discussion, so if you find any issue with this project, incl
 
 ## 🚩 Updates
 
-- 🏃 More public demos are expected!
 - 🔥 March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
 - 🔥 March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
 - 🔥 March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
