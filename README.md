@@ -102,6 +102,9 @@ We are very open to discussion, so if you find any issue with this project, incl
 
 ## 🚩 Updates
 
+![demo_v2](./assets/demo_v2.gif)
+
+- 🔥 April 23, 2024: Real-time interactive generation demo is updated to [version 2](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/stream_v2)! We now have fully responsive interface with `gradio.ImageEditor`. Huge thanks to [@pngwn](https://github.com/pngwn) and Hugging Face 🤗 Gradio team for the [great update (4.27)](https://www.gradio.app/changelog#4-27-0)!
 - 🔥 March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
 - 🔥 March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
 - 🔥 March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
@@ -720,7 +723,7 @@ image.save('my_creation.png')
 ### Demo Application (StreamMultiDiffusion)
 
 <p align="center">
-  <img src="./assets/demo.gif" width=90%>
+  <img src="./assets/demo_v2.gif" width=90%>
 </p>
 
 #### Features
@@ -734,7 +737,7 @@ image.save('my_creation.png')
 #### Run
 
 ```bash
-cd src/demo/stream
+cd src/demo/stream_v2
 python app.py [other options]
 ```
 
