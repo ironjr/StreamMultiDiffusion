@@ -48,18 +48,6 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
-## 🚨 Notice
-
-Please note that we do not host separate pages for this project other than our [official project page](https://jaerinlee.com/research/streammultidiffusion) and [hugging face](https://huggingface.co/spaces/ironjr/SemanticPalette) [space demos](https://huggingface.co/spaces/ironjr/SemanticPaletteXL).
-For example [https://streammultidiffusion.net](https://streammultidiffusion.net/) is not related to us!
-(By the way thanks for hosting)
-
-We do welcome anyone who wants to use our framework/code/app for any personal or commercial purpose (we have opened the code here for free with MIT License).
-However, **we'd be much happier if you cite us in any format in your application**.
-We are very open to discussion, so if you find any issue with this project, including commercialization of the project, please contact [us](https://twitter.com/_ironjr_) or post an issue.
-
----
-
 - [⭐️ Features](#---features)
 - [🚩 Updates](#---updates)
 - [🤖 Installation](#---installation)
@@ -80,6 +68,7 @@ We are very open to discussion, so if you find any issue with this project, incl
   * [Demo Application Architecture](#demo-application-architecture)
 - [🙋 FAQ](#---faq)
   * [What is Semantic Palette Anyway?](#what-is--semantic-palette--anyway-)
+- [🚨 Notice](#---notice)
 - [🌏 Citation](#---citation)
 - [🤗 Acknowledgement](#---acknowledgement)
 - [📧 Contact](#---contact)
@@ -918,6 +907,16 @@ Please cite us if you find our project useful!
     year={2024}
 }
 ```
+
+## 🚨 Notice
+
+Please note that we do not host separate pages for this project other than our [official project page](https://jaerinlee.com/research/streammultidiffusion) and [hugging face](https://huggingface.co/spaces/ironjr/SemanticPalette) [space demos](https://huggingface.co/spaces/ironjr/SemanticPaletteXL).
+For example [https://streammultidiffusion.net](https://streammultidiffusion.net/) is not related to us!
+(By the way thanks for hosting)
+
+We do welcome anyone who wants to use our framework/code/app for any personal or commercial purpose (we have opened the code here for free with MIT License).
+However, **we'd be much happier if you cite us in any format in your application**.
+We are very open to discussion, so if you find any issue with this project, including commercialization of the project, please contact [us](https://twitter.com/_ironjr_) or post an issue.
 
 
 ## 🤗 Acknowledgement
