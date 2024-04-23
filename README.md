@@ -121,10 +121,10 @@ pip install -r requirements.txt
 
 StreamMultiDiffusion is served in serveral different forms.
 
-1. The main GUI demo powered by Gradio is available at `demo/stream/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
+1. The main GUI demo powered by Gradio is available at `demo/stream_v2/app.py`. Just type the below line in your command prompt and open `https://localhost:8000` with any web browser will launch the app.
 
 ```bash
-cd demo/stream
+cd demo/stream_v2
 python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --width 512 --port 8000
 ```
 
@@ -147,6 +147,123 @@ python app.py --model "your stable diffusion 1.5 checkpoint" --height 512 --widt
 5. As a python library by importing the `model` in `src`. For detailed examples and interfaces, please see the Usage section below.
 
 
+---
+
+### Demo Application (StreamMultiDiffusion)
+
+<p align="center">
+  <img src="./assets/demo_v2.gif" width=90%>
+</p>
+
+#### Features
+
+- Drawing with _semantic palette_ with streaming interface.
+- Fully web-based GUI, powered by Gradio.
+- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
+- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
+- Supports 8 semantic brushes.
+
+#### Run
+
+```bash
+cd src/demo/stream_v2
+python app.py [other options]
+```
+
+#### Run with `.safetensors`
+
+We now support `.safetensors` type local models.
+You can run the demo app with your favorite checkpoint models as follows:
+1. Save `<your model>.safetensors` or a [symbolic link](https://mangohost.net/blog/what-is-the-linux-equivalent-to-symbolic-links-in-windows/) to the actual file to `demo/stream/checkpoints`.
+2. Run the demo with your model loaded with `python app.py --model <your model>.safetensors`
+
+Done!
+
+#### Other options
+
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Both Hugging Face model repository / local safetensor types are supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"` or `--model "realcartoonPixar_v6.safetensors"` Please note that safetensors models should reside in `src/demo/stream/checkpoints`!
+- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
+- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
+- `--display_col`: Optional. Number of displays in a row. Useful for buffering the old frames. Default: 2.
+- `--display_row`: Optional. Number of displays in a column. Useful for buffering the old frames. Default: 2.
+- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
+- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: 2024.
+- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
+- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+
+#### Instructions
+
+| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
+| :----------------------------: | :----------------------------: |
+| Upoad a background image | Type some text prompts |
+| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
+| Draw | Press the play button and enjoy 🤩 |
+
+1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
+
+2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
+
+3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
+
+4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
+
+---
+
+### Demo Application (Semantic Palette)
+
+<div>
+
+<p align="center">
+  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
+</p>
+
+</div>
+
+Our first demo _[Semantic Palette](https://huggingface.co/spaces/ironjr/SemanticPalette)_ is now available in your local machine.
+
+#### Features
+
+- Fully web-based GUI, powered by Gradio.
+- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
+- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
+- Supports 5 semantic brushes. If you want more brushes, you can use our python interface directly. Please see our Jupyter notebook references in the `notebooks` directory.
+
+#### Run
+
+```bash
+cd src/demo/semantic_palette
+python app.py [other options]
+```
+
+#### Run with `.safetensors`
+
+We now support `.safetensors` type local models.
+You can run the demo app with your favorite checkpoint models as follows:
+1. Save `<your model>.safetensors` or a [symbolic link](https://mangohost.net/blog/what-is-the-linux-equivalent-to-symbolic-links-in-windows/) to the actual file to `demo/semantic_palette/checkpoints`.
+2. Run the demo with your model loaded with `python app.py --model <your model>.safetensors`
+
+Done!
+
+#### Other options
+
+- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Both Hugging Face model repository / local safetensor types are supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"` or `--model "realcartoonPixar_v6.safetensors"` Please note that safetensors models should reside in `src/demo/semantic_palette/checkpoints`!
+- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
+- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
+- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
+- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: -1 (random).
+- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
+- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
+
+#### Instructions
+
+Instructions on how to use the app to create your images: Please see this twitter [thread](https://twitter.com/_ironjr_/status/1770245714591064066).
+
+#### Tips
+
+I have provided more tips in using the app in another twitter [thread](https://twitter.com/_ironjr_/status/1770716860948025539).
+
+---
 
 ### Basic Usage (Python)
 
@@ -706,128 +823,6 @@ smd = StableMultiDiffusionPipeline(device)
 image = smd.sample('A photo of the dolomites')
 image.save('my_creation.png')
 ```
-
----
-
-### Demo Application (StreamMultiDiffusion)
-
-<p align="center">
-  <img src="./assets/demo_v2.gif" width=90%>
-</p>
-
-#### Features
-
-- Drawing with _semantic palette_ with streaming interface.
-- Fully web-based GUI, powered by Gradio.
-- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
-- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
-- Supports 8 semantic brushes.
-
-#### Run
-
-```bash
-cd src/demo/stream_v2
-python app.py [other options]
-```
-
-#### Run with `.safetensors`
-
-We now support `.safetensors` type local models.
-You can run the demo app with your favorite checkpoint models as follows:
-1. Save `<your model>.safetensors` or a [symbolic link](https://mangohost.net/blog/what-is-the-linux-equivalent-to-symbolic-links-in-windows/) to the actual file to `demo/stream/checkpoints`.
-2. Run the demo with your model loaded with `python app.py --model <your model>.safetensors`
-
-Done!
-
-#### Other options
-
-- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Both Hugging Face model repository / local safetensor types are supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"` or `--model "realcartoonPixar_v6.safetensors"` Please note that safetensors models should reside in `src/demo/stream/checkpoints`!
-- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
-- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
-- `--display_col`: Optional. Number of displays in a row. Useful for buffering the old frames. Default: 2.
-- `--display_row`: Optional. Number of displays in a column. Useful for buffering the old frames. Default: 2.
-- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
-- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: 2024.
-- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
-- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
-
-
-#### Instructions
-
-| ![usage1](./assets/instruction1.png) | ![usage2](./assets/instruction2.png) |
-| :----------------------------: | :----------------------------: |
-| Upoad a background image | Type some text prompts |
-| ![usage3](./assets/instruction3.png) | ![usage4](./assets/instruction4.png) |
-| Draw | Press the play button and enjoy 🤩 |
-
-1. (top-left) **Upload a background image.** You can start with a white background image, as well as any other images from your phone camera or other AI-generated artworks. You can also entirely cover the image editor with specific semantic brush to draw background image simultaneously from the text prompt.
-
-2. (top-right) **Type some text prompts.** Click each semantic brush on the semantic palette on the left of the screen and type in text prompts in the interface below. This will create a new semantic brush for you.
-
-3. (bottom-left) **Draw.** Select appropriate layer (*important*) that matches the order of the semantic palette. That is, ***Layer n*** corresponds to ***Prompt n***. I am not perfectly satisfied with the interface of the drawing interface. Importing professional Javascript-based online drawing tools instead of the default `gr.ImageEditor` will enable more responsive interface. We have released our code with MIT License, so please feel free to fork this repo and build a better user interface upon it. 😁
-
-4. (bottom-right) **Press the play button and enjoy!** The buttons literally mean 'toggle stream/run single/run batch (4)'.
-
----
-
-### Demo Application (Semantic Palette)
-
-<div>
-
-<p align="center">
-  <img src="./assets/demo_semantic_draw_large.gif" width=90%>
-</p>
-
-</div>
-
-Our first demo _[Semantic Palette](https://huggingface.co/spaces/ironjr/SemanticPalette)_ is now available in your local machine.
-
-#### Features
-
-- Fully web-based GUI, powered by Gradio.
-- Supports any Stable Diffusion v1.5 checkpoint with option `--model`.
-- Supports any-sized canvas (if your VRAM permits!) with opetion `--height`, `--width`.
-- Supports 5 semantic brushes. If you want more brushes, you can use our python interface directly. Please see our Jupyter notebook references in the `notebooks` directory.
-
-#### Run
-
-```bash
-cd src/demo/semantic_palette
-python app.py [other options]
-```
-
-#### Run with `.safetensors`
-
-We now support `.safetensors` type local models.
-You can run the demo app with your favorite checkpoint models as follows:
-1. Save `<your model>.safetensors` or a [symbolic link](https://mangohost.net/blog/what-is-the-linux-equivalent-to-symbolic-links-in-windows/) to the actual file to `demo/semantic_palette/checkpoints`.
-2. Run the demo with your model loaded with `python app.py --model <your model>.safetensors`
-
-Done!
-
-#### Other options
-
-- `--model`: Optional. The path to your custom SDv1.5 checkpoint. Both Hugging Face model repository / local safetensor types are supported. e.g., `--model "KBlueLeaf/kohaku-v2.1"` or `--model "realcartoonPixar_v6.safetensors"` Please note that safetensors models should reside in `src/demo/semantic_palette/checkpoints`!
-- `--height` (`-H`): Optional. Height of the canvas. Default: 768.
-- `--width` (`-W`): Optional. Width of the canvas. Default: 1920.
-- `--bootstrap_steps`: Optional. The number of bootstrapping steps that separate each of the different semantic regions. Best when 1-3. Larger value means better separation, but less harmony within the image. Default: 1.
-- `--seed`: Optional. The default seed of the application. Almost never needed since you can modify the seed value in GUI. Default: -1 (random).
-- `--device`: Optional. The number of GPU card (probably 0-7) you want to run the model. Only for multi-GPU servers. Default: 0.
-- `--port`: Optional. The front-end port of the application. If the port is 8000, you can access your runtime through `https://localhost:8000` from any web browser. Default: 8000.
-
-#### Instructions
-
-Instructions on how to use the app to create your images: Please see this twitter [thread](https://twitter.com/_ironjr_/status/1770245714591064066).
-
-#### Tips
-
-I have provided more tips in using the app in another twitter [thread](https://twitter.com/_ironjr_/status/1770716860948025539).
-
----
-
-### Basic Usage (CLI)
-
-Coming Soon!
 
 
 ---
