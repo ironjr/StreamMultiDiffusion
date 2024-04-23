@@ -505,12 +505,12 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
         <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
         </br>
         <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
-            <a href='https://arxiv.org/abs/2403.09055'>
-                <img src="https://img.shields.io/badge/arXiv-2403.09055-red">
-            </a>
-            &nbsp;
             <a href='https://jaerinlee.com/research/StreamMultiDiffusion'>
                 <img src='https://img.shields.io/badge/Project-Page-green' alt='Project Page'>
+            </a>
+            &nbsp;
+            <a href='https://arxiv.org/abs/2403.09055'>
+                <img src="https://img.shields.io/badge/arXiv-2403.09055-red">
             </a>
             &nbsp;
             <a href='https://github.com/ironjr/StreamMultiDiffusion'>
@@ -525,8 +525,8 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
                 <img src='https://img.shields.io/badge/license-MIT-lightgrey'>
             </a>
             &nbsp;
-            <a href='https://huggingface.co/papers/2403.09055'>
-                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Paper-StreamMultiDiffusion-yellow'>
+            <a href='https://huggingface.co/spaces/ironjr/StreamMultiDiffusion'>
+                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Demo-StreamMultiDiffusion-yellow'>
             </a>
             &nbsp;
             <a href='https://huggingface.co/spaces/ironjr/SemanticPalette'>

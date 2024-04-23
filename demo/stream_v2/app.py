@@ -143,6 +143,8 @@ opt.colors = [
     # '#92C6EC',
     # '#FECAC0',
 ]
+opt.excluded_keys = ['inpainting_mode', 'is_running', 'active_palettes', 'current_palette', 'model']
+opt.prep_time = 20
 
 
 ### Event handlers
@@ -288,13 +290,15 @@ def change_neg_prompt(state, neg_prompt):
 
 
 def import_state(state, json_text):
-    current_palette = state.current_palette
-    # active_palettes = state.active_palettes
+    prev_state_dict = {k: v for k, v in vars(state).items() if k in opt.excluded_keys}
     state_dict = json.loads(json_text)
-    for k in ('inpainting_mode', 'is_runing', 'active_palettes', 'current_palette'):
+    for k in opt.excluded_keys:
         if k in state_dict:
             del state_dict[k]
+    state_dict.update(prev_state_dict)
     state = argparse.Namespace(**state_dict)
+
+    current_palette = state.current_palette
     state.active_palettes = opt.max_palettes
     return [state] + [
         gr.update(value=v, visible=True) for v in state.prompt_names
@@ -508,10 +512,6 @@ css = f"""
     width: 100%;
     aspect-ratio: {opt.width} / {opt.height};
 }}
-
-.layer-wrap {{
-    display: none;
-}}
 """
 
 for i in range(opt.max_palettes + 1):
@@ -528,40 +528,35 @@ for i in range(opt.max_palettes + 1):
 """
 
 css = css + f"""
-
 .mask-red {{
     left: 0;
     width: 0;
     color: #BE002A;
-    -webkit-animation: text-red {opt.run_time:.1f}s ease infinite;
-            animation: text-red {opt.run_time:.1f}s ease infinite;
+    -webkit-animation: text-red {opt.run_time + opt.prep_time:.1f}s ease infinite;
+            animation: text-red {opt.run_time + opt.prep_time:.1f}s ease infinite;
     z-index: 2;
     background: transparent;
 }}
 .mask-white {{
     right: 0;
 }}
-
 /* Flames */
-
 #red-flame {{
     opacity: 0;
-    -webkit-animation: show-flames {opt.run_time:.1f}s ease infinite, red-flame 120ms ease infinite;
-            animation: show-flames {opt.run_time:.1f}s ease infinite, red-flame 120ms ease infinite;
+    -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
+            animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
     transform-origin: center bottom;
 }}
-
 #yellow-flame {{
     opacity: 0;
-    -webkit-animation: show-flames {opt.run_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
-            animation: show-flames {opt.run_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
+    -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
+            animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
     transform-origin: center bottom;
 }}
-
 #white-flame {{
     opacity: 0;
-    -webkit-animation: show-flames {opt.run_time:.1f}s ease infinite, red-flame 100ms ease infinite;
-            animation: show-flames {opt.run_time:.1f}s ease infinite, red-flame 100ms ease infinite;
+    -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
+            animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
     transform-origin: center bottom;
 }}
 """
@@ -638,12 +633,12 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
         <h5 style="margin: 0;">If you ❤️ our project, please visit our Github and give us a 🌟!</h5>
         </br>
         <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
-            <a href='https://arxiv.org/abs/2403.09055'>
-                <img src="https://img.shields.io/badge/arXiv-2403.09055-red">
-            </a>
-            &nbsp;
             <a href='https://jaerinlee.com/research/StreamMultiDiffusion'>
                 <img src='https://img.shields.io/badge/Project-Page-green' alt='Project Page'>
+            </a>
+            &nbsp;
+            <a href='https://arxiv.org/abs/2403.09055'>
+                <img src="https://img.shields.io/badge/arXiv-2403.09055-red">
             </a>
             &nbsp;
             <a href='https://github.com/ironjr/StreamMultiDiffusion'>
@@ -656,10 +651,6 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
             &nbsp;
             <a href='https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE'>
                 <img src='https://img.shields.io/badge/license-MIT-lightgrey'>
-            </a>
-            &nbsp;
-            <a href='https://huggingface.co/papers/2403.09055'>
-                <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Paper-StreamMultiDiffusion-yellow'>
             </a>
             &nbsp;
             <a href='https://huggingface.co/spaces/ironjr/StreamMultiDiffusion'>
@@ -736,12 +727,11 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
 <h3 style="margin: 0; text-align: center;"><b>❓Usage❓</b></h3>
 </br>
 <div style="justify-content: center; align-items: left; text-align: left;">
-    <p>1-1. Type in the background prompt. Background is not required if you paint the whole drawpad.</p>
-    <p>1-2. (Optional: <em><b>Inpainting mode</b></em>) Uploading a background image will make the app into inpainting mode. Removing the image returns to the creation mode. In the inpainting mode, increasing the <em>Mask Blur STD</em> > 8 for every colored palette is recommended for smooth boundaries.</p>
-    <p>2. Select a semantic brush by clicking onto one in the <b>Semantic Palette</b> above. Edit prompt for the semantic brush.</p>
-    <p>2-1. If you are willing to draw more diverse images, try <b>Create New Semantic Brush</b>.</p>
-    <p>3. Start drawing in the <b>Semantic Drawpad</b> tab. The brush color is directly linked to the semantic brushes.</p>
-    <p>4. Click [<b>GENERATE!</b>] button to create your (large-scale) artwork!</p>
+    <p>1. (Optional) Uploading a background image. No background image means white background. It is <b>not mandatory</b>!</p>
+    <p>2. Modify semantic palette (prompt & settings) as you want by clicking <b>Semantic Palette</b>. Export, import, and share semantic palette for fast configuration.</p>
+    <p>3. Start drawing in the <b>Semantic Drawpad</b> tab. The brush <b>color</b>, not layer, is directly linked to the semantic brushes.</p>
+    <p>4. Click [<b>Lemmy try!</b>] button to grant 1 minute of streaming demo.</p>
+    <p>5. Continue drawing until your quota is over!</p>
 </div>
 </div>
                 """
@@ -775,6 +765,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
                         type='pil',
                         label='Semantic Drawpad',
                         elem_id='drawpad',
+                        layers=False,
                     )
 
 #                     with gr.Accordion(label='Prompt Engineering', open=False):
@@ -1022,71 +1013,66 @@ async () => {{
     // timer arguments: 
     //   #1 - time of animation in mileseconds, 
     //   #2 - days to deadline
-    const animationTime = {opt.run_time};
+    const animationTime = {opt.run_time + opt.prep_time};
     const days = {opt.run_time};
-
     jQuery('#progress-time-fill, #death-group').css({{'animation-duration': animationTime+'s'}});
-
     var deadlineAnimation = function () {{
         setTimeout(function() {{
             jQuery('#designer-arm-grop').css({{'animation-duration': '1.5s'}});
         }}, 0);
-
         setTimeout(function() {{
             jQuery('#designer-arm-grop').css({{'animation-duration': '1.0s'}});
-        }}, {int(opt.run_time * 1000 * 0.2)});
-
+        }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.2)});
         setTimeout(function() {{
             jQuery('#designer-arm-grop').css({{'animation-duration': '0.7s'}});
-        }}, {int(opt.run_time * 1000 * 0.4)});
-
+        }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.4)});
         setTimeout(function() {{
             jQuery('#designer-arm-grop').css({{'animation-duration': '0.3s'}});
-        }}, {int(opt.run_time * 1000 * 0.6)});
-
+        }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.6)});
         setTimeout(function() {{
             jQuery('#designer-arm-grop').css({{'animation-duration': '0.2s'}});
-        }}, {int(opt.run_time * 1000 * 0.75)});
+        }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.75)});
     }};
-
+    var deadlineTextBegin = function () {{
+        var el = jQuery('.deadline-timer');
+        var html = 'Preparing...';
+        el.html(html);
+    }};
     var deadlineTextFinished = function () {{
         var el = jQuery('.deadline-timer');
         var html = 'Done! Retry?';
         el.html(html);
     }};
-
+    var deadlineText = function (remainingTime) {{
+        var el = jQuery('.deadline-timer');
+        var htmlBase = 'Remaining <span class="day">' + remainingTime + '</span> <span class="days">s</span>';
+        el.html(html);
+        var html = '<div class="mask-red"><div class="inner">' + htmlBase + '</div></div><div class="mask-white"><div class="inner">' + htmlBase + '</div></div>';
+        el.html(html);
+    }};
     function timer(totalTime, deadline) {{
         var time = totalTime * 1000;
-        var dayDuration = time / deadline;
-        var actualDay = deadline;
-
+        var dayDuration = time / (deadline + {opt.prep_time});
+        var actualDay = deadline + {opt.prep_time};
         var timer = setInterval(countTime, dayDuration);
-
         function countTime() {{
             --actualDay;
-            jQuery('.deadline-timer .day').text(actualDay);
-
-            if (actualDay == 0) {{
+            if (actualDay > deadline) {{
+                deadlineTextBegin();
+            }} else if (actualDay > 0) {{
+                deadlineText(actualDay);
+                // jQuery('.deadline-timer .day').text(actualDay - {opt.prep_time});
+            }} else {{
                 clearInterval(timer);
                 // jQuery('.deadline-timer .day').text(deadline);
                 deadlineTextFinished();
             }}
         }}
     }}
-
-    var deadlineText = function () {{
-        var el = jQuery('.deadline-timer');
-        var htmlBase = 'Remaining <span class="day">{opt.run_time}</span> <span class="days">s</span>';
-        el.html(html);
-        var html = '<div class="mask-red"><div class="inner">' + htmlBase + '</div></div><div class="mask-white"><div class="inner">' + htmlBase + '</div></div>';
-        el.html(html);
-    }};
-
     var runAnimation = function() {{
         timer(animationTime, days);
-        deadlineAnimation();
-        deadlineText();
-
+        remation();
+        deadlineText({opt.run_time});
         console.log('begin interval', animationTime * 1000);
     }};
     runAnimation();
@@ -1151,7 +1137,7 @@ async () => {{
     #     api_name='quality_select',
     # )
 
-    iface.btn_export_state.click(lambda x: vars(x), state, iface.json_state_export)
+    iface.btn_export_state.click(lambda x: {k: v for k, v in vars(x).items() if k not in opt.excluded_keys}, state, iface.json_state_export)
     iface.btn_import_state.click(import_state, [state, iface.tbox_state_import], [
         state,
         *iface.btn_semantics,
