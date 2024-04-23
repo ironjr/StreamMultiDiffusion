@@ -10,5 +10,5 @@ emoji
 numpy
 tqdm
 jupyterlab
-gradio==4.21.0
+gradio==4.27.0
 peft==0.10.0
