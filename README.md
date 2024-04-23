@@ -89,7 +89,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ---
 
-## 🚩 Updates
+## 🚩 Updates (NEW!)
 
 ![demo_v2](./assets/demo_v2.gif)
 
