@@ -94,16 +94,16 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 ![demo_v2](./assets/demo_v2.gif)
 
 - 🔥 April 23, 2024: Real-time interactive generation demo is updated to [version 2](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/stream_v2)! We now have fully responsive interface with `gradio.ImageEditor`. Huge thanks to [@pngwn](https://github.com/pngwn) and Hugging Face 🤗 Gradio team for the [great update (4.27)](https://www.gradio.app/changelog#4-27-0)!
-- 🔥 March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
-- 🔥 March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
-- 🔥 March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
-- 🔥 March 22, 2024: Our demo app _Semantic Palette_ is now available on [Google Colab](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)! Huge thanks to [@camenduru](https://github.com/camenduru)!
-- 🔥 March 22, 2024: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "your model here"` to run the app from your local machine.
-- 🔥 March 19, 2024: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
-- 🔥 March 16, 2024: Added examples and instructions for region-based generation, panorama generation, and inpainting.
-- 🔥 March 15, 2024: Added detailed instructions in this README for creators.
-- 🔥 March 14, 2024: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
-- 🔥 March 13, 2024: Code release!
+- ✅ March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
+- ✅ March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
+- ✅ March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
+- ✅ March 22, 2024: Our demo app _Semantic Palette_ is now available on [Google Colab](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)! Huge thanks to [@camenduru](https://github.com/camenduru)!
+- ✅ March 22, 2024: The app _Semantic Palette_ is now included in the repository! Run `python src/demo/semantic_palette/app.py --model "your model here"` to run the app from your local machine.
+- ✅ March 19, 2024: Our first public demo of _semantic palette_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPalette)! We would like to give our biggest thanks to the almighty Hugging Face 🤗 team for their help!
+- ✅ March 16, 2024: Added examples and instructions for region-based generation, panorama generation, and inpainting.
+- ✅ March 15, 2024: Added detailed instructions in this README for creators.
+- ✅ March 14, 2024: We have released our paper, StreamMultiDiffusion on [arXiv](https://arxiv.org/abs/2403.09055).
+- ✅ March 13, 2024: Code release!
 
 ---
 
