@@ -892,7 +892,7 @@ class StreamMultiDiffusion(nn.Module):
             )
             strength = torch.as_tensor([self.default_mask_strength], dtype=self.dtype, device=self.device)
             std = torch.as_tensor([self.default_mask_std], dtype=self.dtype, device=self.device)
-            original_mask = torch.zeros((1, 1, self.latent_height, self.latent_width), dtype=self.dtype, device=self.device)
+            original_mask = torch.zeros((1, 1, self.height, self.width), dtype=self.dtype, device=self.device)
 
         elif mask_std is not None or mask_strength is not None:
             # No given mask & edit mode & given std / str -> replace existing mask with given std / str.
