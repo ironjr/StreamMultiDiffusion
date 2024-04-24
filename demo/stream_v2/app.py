@@ -436,7 +436,7 @@ def draw(state, drawpad):
     for i in range(len(has_masks)):
         model.update_single_layer(
             idx=i,
-            mask=masks[i],
+            mask=masks[i:i + 1],
             mask_strength=mask_strengths[i],
             mask_std=mask_stds[i],
         )
