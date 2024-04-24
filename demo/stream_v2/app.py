@@ -127,7 +127,7 @@ prompt_suggestions = [
 opt.max_palettes = 3
 opt.default_prompt_strength = 1.0
 opt.default_mask_strength = 1.0
-opt.default_mask_std = 0.0
+opt.default_mask_std = 8.0
 opt.default_negative_prompt = (
     'nsfw, worst quality, bad quality, normal quality, cropped, framed'
 )
