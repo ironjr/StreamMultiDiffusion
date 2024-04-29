@@ -37,6 +37,7 @@ import numpy as np
 from PIL import Image
 import torch
 
+import spaces
 import gradio as gr
 from huggingface_hub import snapshot_download
 
@@ -47,6 +48,8 @@ from prompt_util import preprocess_prompts, _quality_dict, _style_dict
 
 
 ### Utils
+
+
 
 
 def log_state(state):
@@ -95,8 +98,8 @@ device = f'cuda:{opt.device}' if opt.device >= 0 else 'cpu'
 
 if opt.model is None:
     # opt.model = 'cagliostrolab/animagine-xl-3.1'
-    # opt.model = 'ironjr/BlazingDriveV11m'
-    opt.model = 'KBlueLeaf/kohaku-v2.1'
+    opt.model = 'ironjr/BlazingDriveV11m'
+    # opt.model = 'KBlueLeaf/kohaku-v2.1'
 else:
     if opt.model.endswith('.safetensors'):
         opt.model = os.path.abspath(os.path.join('checkpoints', opt.model))
@@ -150,8 +153,35 @@ opt.prep_time = -3
 
 
 ### Shared memory hack for ZeroGPU
-opt.address = ('localhost', 6000)
-opt.authkey = b'secret password'
+# opt.address = ('localhost', 6000)
+# opt.authkey = b'secret password'
+
+
+### Load examples
+
+root = pathlib.Path(__file__).parent
+example_root = os.path.join(root, 'examples')
+example_images = glob.glob(os.path.join(example_root, '*.png'))
+example_images = [Image.open(i) for i in example_images]
+
+with open(os.path.join(example_root, 'prompt_background.txt')) as f:
+    prompts_background = [l.strip() for l in f.readlines() if l.strip() != '']
+
+with open(os.path.join(example_root, 'prompt_girl.txt')) as f:
+    prompts_girl = [l.strip() for l in f.readlines() if l.strip() != '']
+
+with open(os.path.join(example_root, 'prompt_boy.txt')) as f:
+    prompts_boy = [l.strip() for l in f.readlines() if l.strip() != '']
+
+with open(os.path.join(example_root, 'prompt_props.txt')) as f:
+    prompts_props = [l.strip() for l in f.readlines() if l.strip() != '']
+    prompts_props = {l.split(',')[0].strip(): ','.join(l.split(',')[1:]).strip() for l in prompts_props}
+
+prompt_background = lambda: random.choice(prompts_background)
+prompt_girl = lambda: random.choice(prompts_girl)
+prompt_boy = lambda: random.choice(prompts_boy)
+prompt_props = lambda: np.random.choice(list(prompts_props.keys()), size=(opt.max_palettes - 1), replace=False).tolist()
+
 
 
 ### Event handlers
@@ -209,6 +239,46 @@ def select_palette(state, button, idx):
             gr.update(value=opt.default_mask_std, interactive=False)
         ),
     ])
+    return updates
+
+
+def random_palette(state):
+    # girlboy = random.choice(['A girl smiling at viewer', 'A boy smiling at viewer'])
+    girlboy = random.choice(['girl', 'boy'])
+    girlboy_name = '👧 Girl' if girlboy == 'girl' else '👦 Boy'
+    girlboy_prompt = prompt_girl() if girlboy == 'girl' else prompt_boy()
+
+    prompt_props_ = prompt_props()
+    state.prompt_names = ['🌄 Background'] + [girlboy_name] + prompt_props_
+    state.prompts = ['']  + [girlboy_prompt] + [prompts_props[k] for k in prompt_props_]
+    state.neg_prompts = [
+        opt.default_negative_prompt
+        + (', humans, humans, humans' if i == 0 else '')
+        for i in range(opt.max_palettes + 1)
+    ]
+    state.prompt_strengths = [opt.default_prompt_strength for _ in range(opt.max_palettes)]
+    state.mask_strengths = [opt.default_mask_strength for _ in range(opt.max_palettes)]
+    state.mask_stds = [opt.default_mask_std for _ in range(opt.max_palettes)]
+
+    updates = [state] + [
+        gr.update(value=state.prompt_names[state.current_palette]),
+        gr.update(value=state.prompts[state.current_palette]),
+        gr.update(value=state.neg_prompts[state.current_palette]),
+        (
+            gr.update(value=state.mask_strengths[state.current_palette - 1], interactive=True) if state.current_palette > 0 else
+            gr.update(value=opt.default_mask_strength, interactive=False)
+        ),
+        (
+            gr.update(value=state.prompt_strengths[state.current_palette - 1], interactive=True) if state.current_palette > 0 else
+            gr.update(value=opt.default_prompt_strength, interactive=False)
+        ),
+        (
+            gr.update(value=state.mask_stds[state.current_palette - 1], interactive=True) if state.current_palette > 0 else
+            gr.update(value=opt.default_mask_std, interactive=False)
+        ),
+    ] + [
+        gr.update(value=v) for v in state.prompt_names[1:]
+    ]
     return updates
 
 
@@ -402,6 +472,7 @@ def register(state, drawpad, model):
     return state
 
 
+# @spaces.GPU(duration=(opt.prep_time + opt.run_time + 5))
 def run(state, drawpad):
     # ZeroGPU hack.
     # listener = Listener(opt.address, authkey=opt.authkey)
@@ -493,33 +564,6 @@ def draw(state, drawpad):
     # conn.send(data)
     # conn.close()
 
-### Load examples
-
-
-root = pathlib.Path(__file__).parent
-print(root)
-example_root = os.path.join(root, 'examples')
-example_images = glob.glob(os.path.join(example_root, '*.png'))
-example_images = [Image.open(i) for i in example_images]
-
-# with open(os.path.join(example_root, 'prompt_background_advanced.txt')) as f:
-#     prompts_background = [l.strip() for l in f.readlines() if l.strip() != '']
-
-# with open(os.path.join(example_root, 'prompt_girl.txt')) as f:
-#     prompts_girl = [l.strip() for l in f.readlines() if l.strip() != '']
-
-# with open(os.path.join(example_root, 'prompt_boy.txt')) as f:
-#     prompts_boy = [l.strip() for l in f.readlines() if l.strip() != '']
-
-# with open(os.path.join(example_root, 'prompt_props.txt')) as f:
-#     prompts_props = [l.strip() for l in f.readlines() if l.strip() != '']
-#     prompts_props = {l.split(',')[0].strip(): ','.join(l.split(',')[1:]).strip() for l in prompts_props}
-
-# prompt_background = lambda: random.choice(prompts_background)
-# prompt_girl = lambda: random.choice(prompts_girl)
-# prompt_boy = lambda: random.choice(prompts_boy)
-# prompt_props = lambda: np.random.choice(list(prompts_props.keys()), size=(opt.max_palettes - 2), replace=False).tolist()
-
 
 ### Main application
 
@@ -585,8 +629,8 @@ css = css + f"""
     left: 0;
     width: 0;
     color: #BE002A;
-    -webkit-animation: text-red {opt.run_time + opt.prep_time:.1f}s ease infinite;
-            animation: text-red {opt.run_time + opt.prep_time:.1f}s ease infinite;
+    // -webkit-animation: text-red {opt.run_time + opt.prep_time:.1f}s ease infinite;
+    //         animation: text-red {opt.run_time + opt.prep_time:.1f}s ease infinite;
     z-index: 2;
     background: transparent;
 }}
@@ -598,22 +642,22 @@ css = css + f"""
 
 #red-flame {{
     opacity: 0;
-    -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
-            animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
+    -webkit-animation: idle-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
+            animation: idle-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
     transform-origin: center bottom;
 }}
 
 #yellow-flame {{
     opacity: 0;
-    -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
-            animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
+    -webkit-animation: idle-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
+            animation: idle-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
     transform-origin: center bottom;
 }}
 
 #white-flame {{
     opacity: 0;
-    -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
-            animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
+    -webkit-animation: idle-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
+            animation: idle-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
     transform-origin: center bottom;
 }}
 """
@@ -654,7 +698,6 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
         state.active_palettes = 5
 
         # Front-end initialized to the default values.
-        # prompt_props_ = prompt_props()
         state.prompt_names = [
             '🌄 Background',
             '👧 Girl',
@@ -663,7 +706,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
         ] + ['🎨 New Palette' for _ in range(opt.max_palettes - 3)]
         state.prompts = [
             '',
-           'A girl smiling at viewer',
+            'A girl smiling at viewer',
             'Doggy body part',
             'Flower garden',
         ] + ['' for _ in range(opt.max_palettes - 3)]
@@ -770,6 +813,11 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
                     visible=(state.value.active_palettes < opt.max_palettes),
                 )
 
+                iface.btn_random_palette = gr.Button(
+                    value='Random Semantic Palette',
+                    variant='primary',
+                )
+
             with gr.Accordion(label='Import/Export Semantic Palette', open=True):
                 iface.tbox_state_import = gr.Textbox(label='Put Palette JSON Here To Import')
                 iface.json_state_export = gr.JSON(label='Exported Palette')
@@ -823,6 +871,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
                         type='pil',
                         label='Semantic Drawpad',
                         elem_id='drawpad',
+                        layers=False,
                     )
 
 #                     with gr.Accordion(label='Prompt Engineering', open=False):
@@ -1007,6 +1056,14 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
                         value=opt.seed,
                     )
 
+    gr.HTML(
+        """
+<div style="display: flex; justify-content: center; align-items: center; text-align: center;">
+Deadline animation originally by <a href="https://codepen.io/jtrancozo/pen/mEoEVw">Jonathan Trancozo</a>.
+</div>
+        """
+    )
+                    
     ### Attach event handlers
 
     for idx, btn in enumerate(iface.btn_semantics):
@@ -1029,6 +1086,21 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
         inputs=state,
         outputs=[state, iface.btn_add_palette] + iface.btn_semantics[1:],
         api_name='create_new',
+    )
+
+    iface.btn_random_palette.click(
+        fn=random_palette,
+        inputs=state,
+        outputs=[
+            state,
+            iface.tbox_name,
+            iface.tbox_prompt,
+            iface.tbox_neg_prompt,
+            iface.slider_alpha,
+            iface.slider_strength,
+            iface.slider_std,
+        ] + iface.btn_semantics[1:],
+        api_name='random_palette',
     )
 
     run_event = iface.btn_generate.click(
@@ -1101,18 +1173,65 @@ async () => {{
         var el = gradioEl.querySelector('.deadline-timer');
         var html = 'Preparing...';
         el.innerHTML = html;
+
+        gradioEl.querySelector('#progress-time-fill').style['animation-duration'] = 1000000 + 's';
+        gradioEl.querySelector('#progress-time-fill').style['-webkit-animation-name'] = 'idle-fill';
+        gradioEl.querySelector('#progress-time-fill').style['animation-name'] = 'idle-fill';
+
+        gradioEl.querySelector('#death-group').style['animation-duration'] = 1000000 + 's';
+        gradioEl.querySelector('#death-group').style['-webkit-animation-name'] = 'idle';
+        gradioEl.querySelector('#death-group').style['animation-name'] = 'idle';
+
+        gradioEl.querySelector('#red-flame').style['-webkit-animation-name'] = 'idle-flames';
+        gradioEl.querySelector('#red-flame').style['animation-name'] = 'idle-flames';
+        gradioEl.querySelector('#yellow-flame').style['-webkit-animation-name'] = 'idle-flames';
+        gradioEl.querySelector('#yellow-flame').style['animation-name'] = 'idle-flames';
+        gradioEl.querySelector('#white-flame').style['-webkit-animation-name'] = 'idle-flames';
+        gradioEl.querySelector('#white-flame').style['animation-name'] = 'idle-flames';
     }};
 
     var deadlineTextFinished = function () {{
         var el = gradioEl.querySelector('.deadline-timer');
         var html = 'Done! Retry?';
         el.innerHTML = html;
+
+        gradioEl.querySelector('#progress-time-fill').style['animation-duration'] = 1000000 + 's';
+        gradioEl.querySelector('#progress-time-fill').style['-webkit-animation-name'] = 'finished-fill';
+        gradioEl.querySelector('#progress-time-fill').style['animation-name'] = 'finished-fill';
+
+        gradioEl.querySelector('#death-group').style['animation-duration'] = 1000000 + 's';
+        gradioEl.querySelector('#death-group').style['-webkit-animation-name'] = 'finished';
+        gradioEl.querySelector('#death-group').style['animation-name'] = 'finished';
+
+        gradioEl.querySelector('#red-flame').style['-webkit-animation-name'] = 'finished-flames';
+        gradioEl.querySelector('#red-flame').style['animation-name'] = 'finished-flames';
+        gradioEl.querySelector('#yellow-flame').style['-webkit-animation-name'] = 'finished-flames';
+        gradioEl.querySelector('#yellow-flame').style['animation-name'] = 'finished-flames';
+        gradioEl.querySelector('#white-flame').style['-webkit-animation-name'] = 'finished-flames';
+        gradioEl.querySelector('#white-flame').style['animation-name'] = 'finished-flames';
     }};
 
     var deadlineText = function (remainingTime) {{
+        if (remainingTime == days) {{
+            gradioEl.querySelector('#progress-time-fill').style['animation-duration'] = animationTime + 's';
+            gradioEl.querySelector('#progress-time-fill').style['-webkit-animation-name'] = 'progress-fill';
+            gradioEl.querySelector('#progress-time-fill').style['animation-name'] = 'progress-fill';
+
+            gradioEl.querySelector('#death-group').style['animation-duration'] = animationTime + 's';
+            gradioEl.querySelector('#death-group').style['-webkit-animation-name'] = 'walk';
+            gradioEl.querySelector('#death-group').style['animation-name'] = 'walk';
+
+            gradioEl.querySelector('#red-flame').style['-webkit-animation-name'] = 'show-flames';
+            gradioEl.querySelector('#red-flame').style['animation-name'] = 'show-flames';
+            gradioEl.querySelector('#yellow-flame').style['-webkit-animation-name'] = 'show-flames';
+            gradioEl.querySelector('#yellow-flame').style['animation-name'] = 'show-flames';
+            gradioEl.querySelector('#white-flame').style['-webkit-animation-name'] = 'show-flames';
+            gradioEl.querySelector('#white-flame').style['animation-name'] = 'show-flames';
+        }}
         var el = gradioEl.querySelector('.deadline-timer');
         var htmlBase = 'Remaining <span class="day">' + remainingTime + '</span> <span class="days">s</span>';
-        var html = '<div class="mask-red"><div class="inner">' + htmlBase + '</div></div><div class="mask-white"><div class="inner">' + htmlBase + '</div></div>';
+        // var html = '<div class="mask-red"><div class="inner">' + htmlBase + '</div></div><div class="mask-white"><div class="inner">' + htmlBase + '</div></div>';
+        var html = '<div class="mask-white"><div class="inner">' + htmlBase + '</div></div>';
         el.innerHTML = html;
     }};
 
@@ -1136,9 +1255,6 @@ async () => {{
         }}
     }}
 
-    var imgSrc1 = gradioEl.querySelector('#output-screen > button > div > img').src;
-    console.log(imgSrc1);
-
     var runAnimation = function() {{
         var imgSrc = gradioEl.querySelector('#output-screen > button > div > img').src;
         var state = false;
@@ -1147,7 +1263,7 @@ async () => {{
         function checkAndRun() {{
             var imgSrcNew = gradioEl.querySelector('#output-screen > button > div > img').src;
 
-            console.log('state', state, 'src', imgSrc, 'src_new', imgSrcNew);
+            // console.log('state', state, 'src', imgSrc, 'src_new', imgSrcNew);
             if (!state) {{
                 if (imgSrc == imgSrcNew) {{
                     // Do nothing.
@@ -1157,8 +1273,6 @@ async () => {{
                     state = true;
 
                     // Run the main animation just once.
-                    gradioEl.querySelector('#progress-time-fill').style['animation-duration'] = animationTime + 's';
-                    gradioEl.querySelector('#death-group').style['animation-duration'] = animationTime + 's';
                     timerFunc(animationTime, days);
                     deadlineAnimation();
                     deadlineText({opt.run_time});
