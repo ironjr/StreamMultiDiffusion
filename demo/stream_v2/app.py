@@ -31,6 +31,7 @@ import glob
 import pathlib
 from functools import partial
 from pprint import pprint
+from multiprocessing.connection import Client, Listener
 
 import numpy as np
 from PIL import Image
@@ -46,8 +47,6 @@ from prompt_util import preprocess_prompts, _quality_dict, _style_dict
 
 
 ### Utils
-
-
 
 
 def log_state(state):
@@ -80,7 +79,8 @@ parser.add_argument('-H', '--height', type=int, default=768)
 parser.add_argument('-W', '--width', type=int, default=768)
 parser.add_argument('--model', type=str, default=None, help='Hugging face model repository or local path for a SD1.5 model checkpoint to run.')
 parser.add_argument('--bootstrap_steps', type=int, default=1)
-parser.add_argument('--guidance_scale', type=float, default=0) # 1.2
+parser.add_argument('--bootstrap_mix_steps', type=int, default=1)
+parser.add_argument('--guidance_scale', type=float, default=1.0) # 1.2
 parser.add_argument('--run_time', type=float, default=60)
 parser.add_argument('--seed', type=int, default=-1)
 parser.add_argument('--device', type=int, default=0)
@@ -108,14 +108,16 @@ model = StreamMultiDiffusion(
     height=opt.height,
     width=opt.width,
     cfg_type="full",
-    autoflush=True,
+    autoflush=False,
     use_tiny_vae=True,
     mask_type='continuous',
     bootstrap_steps=opt.bootstrap_steps,
-    bootstrap_mix_steps=opt.bootstrap_steps,
+    bootstrap_mix_steps=opt.bootstrap_mix_steps,
     guidance_scale=opt.guidance_scale,
     seed=opt.seed,
-)
+).cuda()
+
+print(f'[INFO]     Parameters prepared!')
 
 
 prompt_suggestions = [
@@ -144,7 +146,12 @@ opt.colors = [
     # '#FECAC0',
 ]
 opt.excluded_keys = ['inpainting_mode', 'is_running', 'active_palettes', 'current_palette', 'model']
-opt.prep_time = 20
+opt.prep_time = -3
+
+
+### Shared memory hack for ZeroGPU
+opt.address = ('localhost', 6000)
+opt.authkey = b'secret password'
 
 
 ### Event handlers
@@ -262,6 +269,12 @@ def change_prompt(state, prompt):
     if opt.verbose:
         log_state(state)
 
+    if state.is_running:
+        model.update_single_layer(
+            idx=state.current_palette,
+            prompt=prompt,
+        )
+
     return state
 
 
@@ -269,6 +282,12 @@ def change_neg_prompt(state, neg_prompt):
     state.neg_prompts[state.current_palette] = neg_prompt
     if opt.verbose:
         log_state(state)
+
+    if state.is_running:
+        model.update_single_layer(
+            idx=state.current_palette,
+            neg_prompt=neg_prompt,
+        )
 
     return state
 
@@ -317,11 +336,8 @@ def import_state(state, json_text):
 
 ### Main worker
 
-def generate():
-    return model()
 
-
-def register(state, drawpad):
+def register(state, drawpad, model):
     seed_everything(state.seed if state.seed >=0 else np.random.randint(2147483647))
     print('Generate!')
 
@@ -329,6 +345,9 @@ def register(state, drawpad):
     inpainting_mode = np.asarray(background).sum() != 0
     if not inpainting_mode:
         background = Image.new(size=(opt.width, opt.height), mode='RGB', color=(255, 255, 255))
+        background_prompt = "Simple white background"
+    else:
+        background_prompt = None
     print('Inpainting mode: ', inpainting_mode)
 
     user_input = np.asarray(drawpad['layers'][0]) # (H, W, 4)
@@ -365,7 +384,7 @@ def register(state, drawpad):
 
     model.update_background(
         background.convert('RGB'),
-        prompt=None,
+        prompt=background_prompt,
         negative_prompt=None,
     )
     state.prompts[0] = model.background.prompt
@@ -379,23 +398,45 @@ def register(state, drawpad):
         mask_stds=mask_stds,
         prompt_strengths=prompt_strengths,
     )
-
     state.inpainting_mode = inpainting_mode
     return state
 
 
 def run(state, drawpad):
-    state = register(state, drawpad)
+    # ZeroGPU hack.
+    # listener = Listener(opt.address, authkey=opt.authkey)
+    # conn = listener.accept()
+
+    # Reset model.
+    model.device = torch.device('cuda')
+    model.reset_seed(model.generator, opt.seed)
+    model.reset_latent()
+    model.prepare()
+
+    state = register(state, drawpad, model)
     state.is_running = True
 
     tic = time.time()
     while True:
-        yield [state, generate()]
+        # Receive real-time mask inputs from the main process.
+        # data = conn.recv()
+        # if data is not None:
+        #     print('Received data!!!')
+        #     for i in range(opt.max_palettes):
+        #         model.update_single_layer(
+        #             idx=i,
+        #             mask=data['masks'][i],
+        #             mask_strength=data['mask_strengths'][i],
+        #             mask_std=data['mask_stds'][i],
+        #         )
+
+        yield [state, model()]
         toc = time.time()
         tdelta = toc - tic
         if tdelta > opt.run_time:
             state.is_running = False
-            return [state, generate()]
+            state.model = None
+            return [state, model()]
 
 
 def hide_element():
@@ -408,7 +449,11 @@ def show_element():
 
 def draw(state, drawpad):
     if not state.is_running:
+        print('[WARNING] Streaming is currently off, update ignored.')
         return
+
+    # ZeroGPU hack.
+    # conn = Client(opt.address, authkey=opt.authkey)
 
     user_input = np.asarray(drawpad['layers'][0]) # (H, W, 4)
     foreground_mask = torch.tensor(user_input[..., -1])[None, None] # (1, 1, H, W)
@@ -440,6 +485,13 @@ def draw(state, drawpad):
             mask_strength=mask_strengths[i],
             mask_std=mask_stds[i],
         )
+    # data = dict(
+    #     masks=masks,
+    #     mask_strengths=mask_strengths,
+    #     mask_stds=mask_stds,
+    # )
+    # conn.send(data)
+    # conn.close()
 
 ### Load examples
 
@@ -528,6 +580,7 @@ for i in range(opt.max_palettes + 1):
 """
 
 css = css + f"""
+
 .mask-red {{
     left: 0;
     width: 0;
@@ -540,19 +593,23 @@ css = css + f"""
 .mask-white {{
     right: 0;
 }}
+
 /* Flames */
+
 #red-flame {{
     opacity: 0;
     -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
             animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 120ms ease infinite;
     transform-origin: center bottom;
 }}
+
 #yellow-flame {{
     opacity: 0;
     -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
             animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, yellow-flame 120ms ease infinite;
     transform-origin: center bottom;
 }}
+
 #white-flame {{
     opacity: 0;
     -webkit-animation: show-flames {opt.run_time + opt.prep_time:.1f}s ease infinite, red-flame 100ms ease infinite;
@@ -591,6 +648,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
         state.model_id = opt.model
         state.style_name = '(None)'
         state.quality_name = 'Standard v3.1'
+        state.model = None
 
         # State variables (one-hot).
         state.active_palettes = 5
@@ -765,7 +823,6 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
                         type='pil',
                         label='Semantic Drawpad',
                         elem_id='drawpad',
-                        layers=False,
                     )
 
 #                     with gr.Accordion(label='Prompt Engineering', open=False):
@@ -1015,66 +1072,106 @@ async () => {{
     //   #2 - days to deadline
     const animationTime = {opt.run_time + opt.prep_time};
     const days = {opt.run_time};
-    jQuery('#progress-time-fill, #death-group').css({{'animation-duration': animationTime+'s'}});
+
+    const gradioEl = document.querySelector('body > gradio-app');
+
     var deadlineAnimation = function () {{
         setTimeout(function() {{
-            jQuery('#designer-arm-grop').css({{'animation-duration': '1.5s'}});
+            gradioEl.querySelector('#designer-arm-grop').style['animation-duration'] = '1.5s';
         }}, 0);
+
         setTimeout(function() {{
-            jQuery('#designer-arm-grop').css({{'animation-duration': '1.0s'}});
+            gradioEl.querySelector('#designer-arm-grop').style['animation-duration'] = '1.0s';
         }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.2)});
+
         setTimeout(function() {{
-            jQuery('#designer-arm-grop').css({{'animation-duration': '0.7s'}});
+            gradioEl.querySelector('#designer-arm-grop').style['animation-duration'] = '0.7s';
         }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.4)});
+
         setTimeout(function() {{
-            jQuery('#designer-arm-grop').css({{'animation-duration': '0.3s'}});
+            gradioEl.querySelector('#designer-arm-grop').style['animation-duration'] = '0.3s';
         }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.6)});
+
         setTimeout(function() {{
-            jQuery('#designer-arm-grop').css({{'animation-duration': '0.2s'}});
+            gradioEl.querySelector('#designer-arm-grop').style['animation-duration'] = '0.2s';
         }}, {int((opt.run_time + opt.prep_time) * 1000 * 0.75)});
     }};
+
     var deadlineTextBegin = function () {{
-        var el = jQuery('.deadline-timer');
+        var el = gradioEl.querySelector('.deadline-timer');
         var html = 'Preparing...';
-        el.html(html);
+        el.innerHTML = html;
     }};
+
     var deadlineTextFinished = function () {{
-        var el = jQuery('.deadline-timer');
+        var el = gradioEl.querySelector('.deadline-timer');
         var html = 'Done! Retry?';
-        el.html(html);
+        el.innerHTML = html;
     }};
+
     var deadlineText = function (remainingTime) {{
-        var el = jQuery('.deadline-timer');
+        var el = gradioEl.querySelector('.deadline-timer');
         var htmlBase = 'Remaining <span class="day">' + remainingTime + '</span> <span class="days">s</span>';
-        el.html(html);
         var html = '<div class="mask-red"><div class="inner">' + htmlBase + '</div></div><div class="mask-white"><div class="inner">' + htmlBase + '</div></div>';
-        el.html(html);
+        el.innerHTML = html;
     }};
-    function timer(totalTime, deadline) {{
+
+    function timerFunc(totalTime, deadline) {{
         var time = totalTime * 1000;
         var dayDuration = time / (deadline + {opt.prep_time});
         var actualDay = deadline + {opt.prep_time};
+
         var timer = setInterval(countTime, dayDuration);
+
         function countTime() {{
             --actualDay;
             if (actualDay > deadline) {{
                 deadlineTextBegin();
             }} else if (actualDay > 0) {{
                 deadlineText(actualDay);
-                // jQuery('.deadline-timer .day').text(actualDay - {opt.prep_time});
             }} else {{
                 clearInterval(timer);
-                // jQuery('.deadline-timer .day').text(deadline);
                 deadlineTextFinished();
             }}
         }}
     }}
+
+    var imgSrc1 = gradioEl.querySelector('#output-screen > button > div > img').src;
+    console.log(imgSrc1);
+
     var runAnimation = function() {{
-        timer(animationTime, days);
-        remation();
-        deadlineText({opt.run_time});
-        console.log('begin interval', animationTime * 1000);
+        var imgSrc = gradioEl.querySelector('#output-screen > button > div > img').src;
+        var state = false;
+        var timerMain = setInterval(checkAndRun, 250);
+
+        function checkAndRun() {{
+            var imgSrcNew = gradioEl.querySelector('#output-screen > button > div > img').src;
+
+            console.log('state', state, 'src', imgSrc, 'src_new', imgSrcNew);
+            if (!state) {{
+                if (imgSrc == imgSrcNew) {{
+                    // Do nothing.
+                    deadlineTextBegin();
+                }} else {{
+                    // Running = True
+                    state = true;
+
+                    // Run the main animation just once.
+                    gradioEl.querySelector('#progress-time-fill').style['animation-duration'] = animationTime + 's';
+                    gradioEl.querySelector('#death-group').style['animation-duration'] = animationTime + 's';
+                    timerFunc(animationTime, days);
+                    deadlineAnimation();
+                    deadlineText({opt.run_time});
+                    console.log('begin interval', animationTime * 1000);
+                }}
+            }} else {{
+                // End the function.
+                state = false;
+                clearInterval(timerMain);
+            }}
+        }}
     }};
+
     runAnimation();
 }}
         """
