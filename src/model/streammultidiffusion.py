@@ -709,6 +709,51 @@ class StreamMultiDiffusion(nn.Module):
         self.ready_checklist['flushed'] = False
 
     @torch.no_grad()
+    def update_masks(
+        self,
+        masks: Optional[Union[torch.Tensor, Image.Image, List[Image.Image]]] = None,
+        mask_strengths: Optional[Union[torch.Tensor, float, List[float]]] = None,
+        mask_stds: Optional[Union[torch.Tensor, float, List[float]]] = None,
+    ) -> None:
+        if not self.ready_checklist['background_registered']:
+            print('[WARNING]  Register background image first! Request ignored.')
+            return
+
+        ### Register new masks
+
+        if isinstance(masks, Image.Image):
+            masks = [masks]
+        p = self.num_layers
+        n = len(masks) if masks is not None else 0
+
+        # Modificiation.
+        masks, mask_strengths, mask_stds, original_masks = self.process_mask(masks, mask_strengths, mask_stds)
+
+        self.counts = masks.sum(dim=0)  # (T, 1, h, w)
+        self.bg_mask = (1 - self.counts).clip_(0, 1)  # (T, 1, h, w)
+        self.masks = masks  # (p, T, 1, h, w)
+        self.mask_strengths = mask_strengths  # (p,)
+        self.mask_stds = mask_stds  # (p,)
+        self.original_masks = original_masks  # (p, 1, h, w)
+
+        if p > n:
+            # Add more masks: counts and bg_masks are not changed, but only masks are changed.
+            self.masks = torch.cat((
+                self.masks,
+                torch.zeros(
+                    (p - n, self.batch_size, 1, self.latent_height, self.latent_width),
+                    dtype=self.dtype,
+                    device=self.device,
+                ),
+            ), dim=0)
+            print(f'[WARNING]  Detected more prompts ({p}) than masks ({n}). '
+                  'Automatically adds blank masks for the additional prompts.')
+        elif p < n:
+            # Warns user to add more prompts.
+            print(f'[WARNING]  Detected more masks ({n}) than prompts ({p}). '
+                  'Additional masks are ignored until more prompts are provided.')
+
+    @torch.no_grad()
     def update_single_layer(
         self,
         idx: Optional[int] = None,

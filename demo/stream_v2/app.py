@@ -49,9 +49,6 @@ from prompt_util import preprocess_prompts, _quality_dict, _style_dict
 
 ### Utils
 
-
-
-
 def log_state(state):
     pprint(vars(opt))
     if isinstance(state, gr.State):
@@ -118,7 +115,7 @@ model = StreamMultiDiffusion(
     bootstrap_mix_steps=opt.bootstrap_mix_steps,
     guidance_scale=opt.guidance_scale,
     seed=opt.seed,
-).cuda()
+)
 
 print(f'[INFO]     Parameters prepared!')
 
@@ -406,7 +403,6 @@ def import_state(state, json_text):
 
 ### Main worker
 
-
 def register(state, drawpad, model):
     seed_everything(state.seed if state.seed >=0 else np.random.randint(2147483647))
     print('Generate!')
@@ -421,13 +417,13 @@ def register(state, drawpad, model):
     print('Inpainting mode: ', inpainting_mode)
 
     user_input = np.asarray(drawpad['layers'][0]) # (H, W, 4)
-    foreground_mask = torch.tensor(user_input[..., -1])[None, None] # (1, 1, H, W)
-    user_input = torch.tensor(user_input[..., :-1]) # (H, W, 3)
+    foreground_mask = torch.tensor(user_input[..., -1], device=model.device)[None, None] # (1, 1, H, W)
+    user_input = torch.tensor(user_input[..., :-1], device=model.device) # (H, W, 3)
 
     palette = torch.tensor([
         tuple(int(s[i+1:i+3], 16) for i in (0, 2, 4))
         for s in opt.colors[1:]
-    ]) # (N, 3)
+    ], device=model.device) # (N, 3)
     masks = (palette[:, None, None, :] == user_input[None]).all(dim=-1)[:, None, ...] # (N, 1, H, W)
     # has_masks = [i for i, m in enumerate(masks.sum(dim=(1, 2, 3)) == 0) if not m]
     has_masks = list(range(opt.max_palettes))
@@ -486,6 +482,7 @@ def run(state, drawpad):
 
     state = register(state, drawpad, model)
     state.is_running = True
+    state.history = []
 
     tic = time.time()
     while True:
@@ -501,13 +498,16 @@ def run(state, drawpad):
         #             mask_std=data['mask_stds'][i],
         #         )
 
-        yield [state, model()]
+        image = model()
+        state.history.append(image)
+
+        yield [state, image, state.history]
         toc = time.time()
         tdelta = toc - tic
         if tdelta > opt.run_time:
             state.is_running = False
             state.model = None
-            return [state, model()]
+            return [state, image, state.history]
 
 
 def hide_element():
@@ -527,13 +527,13 @@ def draw(state, drawpad):
     # conn = Client(opt.address, authkey=opt.authkey)
 
     user_input = np.asarray(drawpad['layers'][0]) # (H, W, 4)
-    foreground_mask = torch.tensor(user_input[..., -1])[None, None] # (1, 1, H, W)
-    user_input = torch.tensor(user_input[..., :-1]) # (H, W, 3)
+    foreground_mask = torch.tensor(user_input[..., -1], device=model.device)[None, None] # (1, 1, H, W)
+    user_input = torch.tensor(user_input[..., :-1], device=model.device) # (H, W, 3)
 
     palette = torch.tensor([
         tuple(int(s[i+1:i+3], 16) for i in (0, 2, 4))
         for s in opt.colors[1:]
-    ]) # (N, 3)
+    ], device=model.device) # (N, 3)
     masks = (palette[:, None, None, :] == user_input[None]).all(dim=-1)[:, None, ...] # (N, 1, H, W)
     # has_masks = [i for i, m in enumerate(masks.sum(dim=(1, 2, 3)) == 0) if not m]
     has_masks = list(range(opt.max_palettes))
@@ -549,13 +549,18 @@ def draw(state, drawpad):
     #     mask_strengths = [1] + [state.mask_strengths[v] for v in has_masks]
     #     mask_stds = [0] + [state.mask_stds[v] for v in has_masks]
 
-    for i in range(len(has_masks)):
-        model.update_single_layer(
-            idx=i,
-            mask=masks[i:i + 1],
-            mask_strength=mask_strengths[i],
-            mask_std=mask_stds[i],
-        )
+    model.update_masks(
+        masks=masks,
+        mask_strengths=mask_strengths,
+        mask_stds=mask_stds,
+    )
+    # for i in range(len(has_masks)):
+    #     model.update(
+    #         idx=i,
+    #         mask=masks[i:i + 1],
+    #         mask_strength=mask_strengths[i],
+    #         mask_std=mask_stds[i],
+    #     )
     # data = dict(
     #     masks=masks,
     #     mask_strengths=mask_strengths,
@@ -901,6 +906,17 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
                         elem_id='output-screen',
                         value=lambda: random.choice(example_images),
                     )
+                    
+                    with gr.Accordion(label='History', open=False):
+                        iface.history = gr.Gallery(
+                            label="My creation",
+                            elem_id='output-history',
+                            object_fit='contain',
+                            columns=3,
+                            height='auto',
+                            preview=True,
+                            interactive=False,
+                        )
 
                     iface.btn_generate = gr.Button(
                         value=f'Lemme try! ({int(opt.run_time // 60)} min)',
@@ -1059,7 +1075,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css, head=head) as demo:
     gr.HTML(
         """
 <div style="display: flex; justify-content: center; align-items: center; text-align: center;">
-Deadline animation originally by <a href="https://codepen.io/jtrancozo/pen/mEoEVw">Jonathan Trancozo</a>.
+<p>Deadline animation originally by <a href="https://codepen.io/jtrancozo/pen/mEoEVw">Jonathan Trancozo</a>. Stable Diffusion <a href="https://civitai.com/models/121083?modelVersionId=291921">checkpoint model</a> by <a href="https://twitter.com/br_d">BD</a>.</p>
 </div>
         """
     )
@@ -1118,7 +1134,7 @@ Deadline animation originally by <a href="https://codepen.io/jtrancozo/pen/mEoEV
     run_event.then(
         fn=run,
         inputs=[state, iface.ctrl_semantic],
-        outputs=[state, iface.image_slot],
+        outputs=[state, iface.image_slot, iface.history],
         api_name='run',
     ).then(
         fn=hide_element,
