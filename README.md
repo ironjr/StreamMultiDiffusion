@@ -17,8 +17,9 @@
 [![LICENSE](https://img.shields.io/badge/license-MIT-lightgrey)](https://github.com/ironjr/StreamMultiDiffusion/blob/main/LICENSE)
 [![HFPaper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Paper-yellow)](https://huggingface.co/papers/2403.09055)
 
-[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SD1.5-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
-[![HFDemo2](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SDXL-yellow)](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)
+[![HFDemoMain](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-Main-yellow)](https://huggingface.co/spaces/ironjr/StreamMultiDiffusion)
+[![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SemanticPaletteSD1.5-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
+[![HFDemo2](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SemanticPaletteSDXL-yellow)](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)
 
 </div>
@@ -93,6 +94,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ![demo_v2](./assets/demo_v2.gif)
 
+- 🔥 April 30, 2024: Real-time interactive generation demo is now published at [Hugging Face Space](https://huggingface.co/spaces/ironjr/StreamMultiDiffusion)!
 - 🔥 April 23, 2024: Real-time interactive generation demo is updated to [version 2](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/stream_v2)! We now have fully responsive interface with `gradio.ImageEditor`. Huge thanks to [@pngwn](https://github.com/pngwn) and Hugging Face 🤗 Gradio team for the [great update (4.27)](https://www.gradio.app/changelog#4-27-0)!
 - ✅ March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
 - ✅ March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
