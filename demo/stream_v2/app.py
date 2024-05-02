@@ -37,7 +37,6 @@ import numpy as np
 from PIL import Image
 import torch
 
-import spaces
 import gradio as gr
 from huggingface_hub import snapshot_download
 
@@ -468,7 +467,6 @@ def register(state, drawpad, model):
     return state
 
 
-# @spaces.GPU(duration=(opt.prep_time + opt.run_time + 5))
 def run(state, drawpad):
     # ZeroGPU hack.
     # listener = Listener(opt.address, authkey=opt.authkey)
