@@ -20,7 +20,7 @@
 
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
 from diffusers import (
-    AutoencoderTiny,
+    AutoencoderKL,
     StableDiffusionXLPipeline,
     UNet2DConditionModel,
     EulerDiscreteScheduler,
@@ -161,6 +161,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
         # Create model.
         print(f'[INFO] Loading Stable Diffusion...')
+
         variant = None
         model_ckpt = None
         lora_ckpt = None
@@ -175,13 +176,15 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             self.pipe.set_adapters(["lightning"], adapter_weights=[lora_weight])
             self.pipe.fuse_lora()
         else:
-            model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
+            #model_key = 'stabilityai/stable-diffusion-xl-base-1.0'
             variant = 'fp16'
-            model_ckpt = "sdxl_lightning_4step_unet.safetensors" # Use the correct ckpt for your step setting!
-
-            unet = UNet2DConditionModel.from_config(model_key, subfolder='unet').to(self.device, self.dtype)
-            unet.load_state_dict(load_file(hf_hub_download(lightning_repo, model_ckpt), device=self.device))
-            self.pipe = StableDiffusionXLPipeline.from_pretrained(model_key, unet=unet, torch_dtype=self.dtype, variant=variant).to(self.device)
+            model_ckpt = 'drive/MyDrive/checkpoints/john_cena_last.ckpt' # Use the correct ckpt for your step setting!
+            print(model_ckpt)
+            #model_ckpt = "sdxl_lightning_8step_unet.safetensors"
+            #unet = UNet2DConditionModel.from_config(model_key, subfolder='unet').to(self.device, self.dtype)
+            #unet.load_state_dict(load_file(hf_hub_download(lightning_repo, model_ckpt), device=self.device))
+            #self.pipe = StableDiffusionXLPipeline.from_pretrained(model_key, unet=unet, torch_dtype=self.dtype, variant=variant).to(self.device)
+            self.pipe = StableDiffusionXLPipeline.from_single_file(model_ckpt, torch_dtype=self.dtype, variant="fp16").to(self.device)
 
         # Create model
         if has_i2t:
@@ -190,7 +193,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
         # Use SDXL-Lightning LoRA by default.
         self.pipe.scheduler = EulerDiscreteScheduler.from_config(
-            self.pipe.scheduler.config, timestep_spacing="trailing")
+            self.pipe.scheduler.config, timestep_spaEulerDiscreteSchedulercing="trailing")
         self.scheduler = self.pipe.scheduler
         self.default_num_inference_steps = 4
         self.default_guidance_scale = 0.0
@@ -203,6 +206,8 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         else:
             self.prepare_lightning_schedule(t_index_list, 50)
 
+        vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16).to(self.device)
+        self.pipe.vae = vae
         self.vae = self.pipe.vae
         self.tokenizer = self.pipe.tokenizer
         self.tokenizer_2 = self.pipe.tokenizer_2
@@ -1081,6 +1086,8 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         if isinstance(negative_prompts, str):
             negative_prompts = [negative_prompts]
         num_masks = len(masks)
+        print('PROMPTS GIVEN')
+        print(prompts)
         num_prompts = len(prompts)
         num_nprompts = len(negative_prompts)
         assert num_prompts in (num_masks, 1), \
@@ -1179,6 +1186,8 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         prompt_embeds = None
         negative_prompt_embeds = None
 
+        print(prompts)
+
         (
             prompt_embeds,
             negative_prompt_embeds,
@@ -1198,6 +1207,8 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             lora_scale=text_encoder_lora_scale,
         )
+        print('PROMPT EMBEDS 1')
+        print(prompt_embeds.shape)
 
         add_text_embeds = pooled_prompt_embeds
         if self.text_encoder_2 is None:
@@ -1234,11 +1245,23 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                 assert len(s) == num_prompts, \
                     f'The number of prompt strengths {len(s)} should match the number of prompts {num_prompts}!'
                 s = torch.as_tensor(s, dtype=self.dtype, device=self.device)
+            #print(s.shape)
+            s1 = s[:, None]
             s = s[:, None, None]
+            #print(s.shape)
+            #print(s1.shape)
 
             be = prompt_embeds[:1]
             fe = prompt_embeds[1:]
             prompt_embeds = torch.lerp(be, fe, s)  # (p, 77, 1024)
+            #prompt_embeds = prompt_embeds[1:,:]
+            #print('BACKGROUND LERP')
+            #print(prompt_embeds.shape)
+            ba = pooled_prompt_embeds[0]
+            fa = pooled_prompt_embeds[1]
+            pooled_prompt_embeds = torch.lerp(ba, fa, s1)
+            #pooled_prompt_embeds = pooled_prompt_embeds[1:,:]
+            #print(pooled_prompt_embeds.shape)
 
             if negative_prompt_embeds is not None:
                 bu = negative_prompt_embeds[:1]
@@ -1267,6 +1290,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         del negative_prompt_embeds, negative_pooled_prompt_embeds, negative_add_time_ids
 
         prompt_embeds = prompt_embeds.to(device)
+        add_text_embeds = pooled_prompt_embeds
         add_text_embeds = add_text_embeds.to(device)
         add_time_ids = add_time_ids.to(device).repeat(batch_size * num_images_per_prompt, 1)
 
@@ -1275,7 +1299,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
         # Latent initialization.
         if self.timesteps[0] < 999 and has_background:
-            latents = self.scheduler_add_noise(bg_latents, None, 0, initial=True)
+            latents = self.scheduler_add_noise(bg_latent, None, 0, initial=True)
         else:
             latents = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
             latents = latents * self.scheduler.init_noise_sigma
@@ -1312,7 +1336,8 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                     if i < bootstrap_steps:
                         mix_ratio = min(1, max(0, boostrap_mix_steps - i))
                         # Treat the first foreground latent as the background latent if one does not exist.
-                        bg_latents_ = bg_latents[..., h_start:h_end, w_start:w_end] if has_background else latents_[:1]
+                        print(bg_latent.shape)
+                        bg_latents_ = bg_latent[..., h_start:h_end, w_start:w_end] if has_background else latents_[:1]
                         white_ = white[..., h_start:h_end, w_start:w_end]
                         white_ = self.scheduler_add_noise(white_, None, i, initial=True)
                         bg_latents_ = mix_ratio * white_ + (1.0 - mix_ratio) * bg_latents_
@@ -1323,8 +1348,16 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
                     latent_model_input = torch.cat([latents_] * 2) if do_classifier_free_guidance else latents_
                     latent_model_input = self.scheduler_scale_model_input(latent_model_input, i)
-
+                    print("LATENT INPUT")
+                    print(latent_model_input.shape)
+                    print("PROMPT EMBEDS")
+                    print(prompt_embeds.shape)
+                    print('ADD TEXT')
+                    print(add_text_embeds.shape)
+                    print('ADD TIME')
+                    print(add_time_ids_input.shape)
                     # Perform one step of the reverse diffusion.
+                    
                     added_cond_kwargs = {"text_embeds": add_text_embeds, "time_ids": add_time_ids_input}
                     noise_pred = self.unet(
                         latent_model_input,
@@ -1363,7 +1396,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                 latents = torch.where(count_all > 0, value / count_all, value)
                 bg_mask = (1 - count_all).clip_(0, 1)  # (T, 1, h, w)
                 if has_background:
-                    latents = (1 - bg_mask) * latents + bg_mask * bg_latents
+                    latents = (1 - bg_mask) * latents + bg_mask * bg_latent
 
                 # Noise is added after mixing.
                 if i < len(self.timesteps) - 1:
