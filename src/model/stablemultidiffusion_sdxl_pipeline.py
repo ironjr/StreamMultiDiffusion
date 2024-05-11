@@ -1199,30 +1199,6 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             lora_scale=text_encoder_lora_scale,
         )
 
-        add_text_embeds = pooled_prompt_embeds
-        if self.text_encoder_2 is None:
-            text_encoder_projection_dim = int(pooled_prompt_embeds.shape[-1])
-        else:
-            text_encoder_projection_dim = self.text_encoder_2.config.projection_dim
-
-        add_time_ids = self._get_add_time_ids(
-            original_size,
-            crops_coords_top_left,
-            target_size,
-            dtype=prompt_embeds.dtype,
-            text_encoder_projection_dim=text_encoder_projection_dim,
-        )
-        if negative_original_size is not None and negative_target_size is not None:
-            negative_add_time_ids = self._get_add_time_ids(
-                negative_original_size,
-                negative_crops_coords_top_left,
-                negative_target_size,
-                dtype=prompt_embeds.dtype,
-                text_encoder_projection_dim=text_encoder_projection_dim,
-            )
-        else:
-            negative_add_time_ids = add_time_ids
-
         if has_background:
             # First channel is background prompt text embeds. Background prompt itself is not used for generation.
             s = prompt_strengths
@@ -1248,16 +1224,60 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                     assert fu.shape[0] == 1 and fe.shape == num_prompts
                     fu = fu.repeat(num_prompts, 1, 1)
                 negative_prompt_embeds = torch.lerp(bu, fu, s)  # (n, 77, 1024)
+
+            be = pooled_prompt_embeds[:1]
+            fe = pooled_prompt_embeds[1:]
+            pooled_prompt_embeds = torch.lerp(be, fe, s[..., 0])  # (p, 1280)
+
+            if negative_pooled_prompt_embeds is not None:
+                bu = negative_pooled_prompt_embeds[:1]
+                fu = negative_pooled_prompt_embeds[1:]
+                if num_prompts > num_nprompts:
+                    # # negative prompts = 1; # prompts > 1.
+                    assert fu.shape[0] == 1 and fe.shape == num_prompts
+                    fu = fu.repeat(num_prompts, 1)
+                negative_pooled_prompt_embeds = torch.lerp(bu, fu, s[..., 0])  # (n, 1280)
         elif negative_prompt_embeds is not None and num_prompts > num_nprompts:
             # # negative prompts = 1; # prompts > 1.
             assert negative_prompt_embeds.shape[0] == 1 and prompt_embeds.shape[0] == num_prompts
             negative_prompt_embeds = negative_prompt_embeds.repeat(num_prompts, 1, 1)
+
+            assert negative_pooled_prompt_embeds.shape[0] == 1 and pooled_prompt_embeds.shape[0] == num_prompts
+            negative_pooled_prompt_embeds = negative_pooled_prompt_embeds.repeat(num_prompts, 1)
         # assert negative_prompt_embeds.shape[0] == prompt_embeds.shape[0] == num_prompts
         if num_masks > num_prompts:
             assert masks.shape[0] == num_masks and num_prompts == 1
             prompt_embeds = prompt_embeds.repeat(num_masks, 1, 1)
             if negative_prompt_embeds is not None:
                 negative_prompt_embeds = negative_prompt_embeds.repeat(num_masks, 1, 1)
+
+            pooled_prompt_embeds = pooled_prompt_embeds.repeat(num_masks, 1)
+            if negative_pooled_prompt_embeds is not None:
+                negative_pooled_prompt_embeds = negative_pooled_prompt_embeds.repeat(num_masks, 1)
+
+        add_text_embeds = pooled_prompt_embeds
+        if self.text_encoder_2 is None:
+            text_encoder_projection_dim = int(pooled_prompt_embeds.shape[-1])
+        else:
+            text_encoder_projection_dim = self.text_encoder_2.config.projection_dim
+
+        add_time_ids = self._get_add_time_ids(
+            original_size,
+            crops_coords_top_left,
+            target_size,
+            dtype=prompt_embeds.dtype,
+            text_encoder_projection_dim=text_encoder_projection_dim,
+        )
+        if negative_original_size is not None and negative_target_size is not None:
+            negative_add_time_ids = self._get_add_time_ids(
+                negative_original_size,
+                negative_crops_coords_top_left,
+                negative_target_size,
+                dtype=prompt_embeds.dtype,
+                text_encoder_projection_dim=text_encoder_projection_dim,
+            )
+        else:
+            negative_add_time_ids = add_time_ids
 
         # SDXL pipeline settings.
         if do_classifier_free_guidance:
@@ -1274,11 +1294,17 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         ### Run
 
         # Latent initialization.
+        noise = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
         if self.timesteps[0] < 999 and has_background:
-            latents = self.scheduler_add_noise(bg_latents, None, 0, initial=True)
+            latent = self.scheduler_add_noise(bg_latent, noise, 0, initial=True)
         else:
-            latents = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
-            latents = latents * self.scheduler.init_noise_sigma
+            noise = torch.randn((1, self.unet.config.in_channels, h, w), dtype=self.dtype, device=self.device)
+            latent = noise * self.scheduler.init_noise_sigma
+
+        if has_background:
+            noise_bg_latents = [
+                self.scheduler_add_noise(bg_latent, noise, i, initial=True) for i in range(len(self.timesteps))
+            ] + [bg_latent]
 
         # Tiling (if needed).
         if height > tile_size or width > tile_size:
@@ -1287,9 +1313,9 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             tile_masks = tile_masks.to(self.device)
         else:
             views = [(0, h, 0, w)]
-            tile_masks = latents.new_ones((1, 1, h, w))
-        value = torch.zeros_like(latents)
-        count_all = torch.zeros_like(latents)
+            tile_masks = latent.new_ones((1, 1, h, w))
+        value = torch.zeros_like(latent)
+        count_all = torch.zeros_like(latent)
 
         with torch.autocast('cuda'):
             for i, t in enumerate(tqdm(self.timesteps)):
@@ -1300,7 +1326,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                 count_all.zero_()
                 for j, (h_start, h_end, w_start, w_end) in enumerate(views):
                     fg_mask_ = fg_mask[..., h_start:h_end, w_start:w_end]
-                    latents_ = latents[..., h_start:h_end, w_start:w_end].repeat(num_masks, 1, 1, 1)
+                    latent_ = latent[..., h_start:h_end, w_start:w_end].repeat(num_masks, 1, 1, 1)
 
                     # Additional arguments for the SDXL pipeline.
                     add_time_ids_input = add_time_ids.clone()
@@ -1312,16 +1338,16 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                     if i < bootstrap_steps:
                         mix_ratio = min(1, max(0, boostrap_mix_steps - i))
                         # Treat the first foreground latent as the background latent if one does not exist.
-                        bg_latents_ = bg_latents[..., h_start:h_end, w_start:w_end] if has_background else latents_[:1]
+                        bg_latent_ = noise_bg_latents[i][..., h_start:h_end, w_start:w_end] if has_background else latent_[:1]
                         white_ = white[..., h_start:h_end, w_start:w_end]
-                        white_ = self.scheduler_add_noise(white_, None, i, initial=True)
-                        bg_latents_ = mix_ratio * white_ + (1.0 - mix_ratio) * bg_latents_
-                        latents_ = (1.0 - fg_mask_) * bg_latents_ + fg_mask_ * latents_
+                        white_ = self.scheduler_add_noise(white_, noise, i, initial=True)
+                        bg_latent_ = mix_ratio * white_ + (1.0 - mix_ratio) * bg_latent_
+                        latent_ = (1.0 - fg_mask_) * bg_latent_ + fg_mask_ * latent_
 
                         # Centering.
-                        latents_ = shift_to_mask_bbox_center(latents_, fg_mask_, reverse=True)
+                        latent_ = shift_to_mask_bbox_center(latent_, fg_mask_, reverse=True)
 
-                    latent_model_input = torch.cat([latents_] * 2) if do_classifier_free_guidance else latents_
+                    latent_model_input = torch.cat([latent_] * 2) if do_classifier_free_guidance else latent_
                     latent_model_input = self.scheduler_scale_model_input(latent_model_input, i)
 
                     # Perform one step of the reverse diffusion.
@@ -1344,30 +1370,30 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                         # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
                         noise_pred = rescale_noise_cfg(noise_pred, noise_pred_cond, guidance_rescale=guidance_rescale)
 
-                    latents_ = self.scheduler_step(noise_pred, i, latents_)
+                    latent_ = self.scheduler_step(noise_pred, i, latent_)
 
                     if i < bootstrap_steps:
                         # Uncentering.
-                        latents_ = shift_to_mask_bbox_center(latents_, fg_mask_)
+                        latent_ = shift_to_mask_bbox_center(latent_, fg_mask_)
 
                         # Remove leakage (optional).
-                        leak = (latents_ - bg_latents_).pow(2).mean(dim=1, keepdim=True)
+                        leak = (latent_ - bg_latent_).pow(2).mean(dim=1, keepdim=True)
                         leak_sigmoid = torch.sigmoid(leak / bootstrap_leak_sensitivity) * 2 - 1
                         fg_mask_ = fg_mask_ * leak_sigmoid
 
                     # Mix the latents.
                     fg_mask_ = fg_mask_ * tile_masks[:, j:j + 1, h_start:h_end, w_start:w_end]
-                    value[..., h_start:h_end, w_start:w_end] += (fg_mask_ * latents_).sum(dim=0, keepdim=True)
+                    value[..., h_start:h_end, w_start:w_end] += (fg_mask_ * latent_).sum(dim=0, keepdim=True)
                     count_all[..., h_start:h_end, w_start:w_end] += fg_mask_.sum(dim=0, keepdim=True)
 
-                latents = torch.where(count_all > 0, value / count_all, value)
+                latent = torch.where(count_all > 0, value / count_all, value)
                 bg_mask = (1 - count_all).clip_(0, 1)  # (T, 1, h, w)
                 if has_background:
-                    latents = (1 - bg_mask) * latents + bg_mask * bg_latents
+                    latent = (1 - bg_mask) * latent + bg_mask * noise_bg_latents[i + 1] # bg_latent
 
                 # Noise is added after mixing.
                 if i < len(self.timesteps) - 1:
-                    latents = self.scheduler_add_noise(latents, None, i + 1)
+                    latent = self.scheduler_add_noise(latent, None, i + 1)
 
         if not output_type == "latent":
             # make sure the VAE is in float32 mode, as it overflows in float16
@@ -1375,7 +1401,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
             if needs_upcasting:
                 self.upcast_vae()
-                latents = latents.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
+                latent = latent.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
 
             # unscale/denormalize the latents
             # denormalize with the mean and std if available and not None
@@ -1383,22 +1409,22 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             has_latents_std = hasattr(self.vae.config, "latents_std") and self.vae.config.latents_std is not None
             if has_latents_mean and has_latents_std:
                 latents_mean = (
-                    torch.tensor(self.vae.config.latents_mean).view(1, 4, 1, 1).to(latents.device, latents.dtype)
+                    torch.tensor(self.vae.config.latents_mean).view(1, 4, 1, 1).to(latent.device, latent.dtype)
                 )
                 latents_std = (
-                    torch.tensor(self.vae.config.latents_std).view(1, 4, 1, 1).to(latents.device, latents.dtype)
+                    torch.tensor(self.vae.config.latents_std).view(1, 4, 1, 1).to(latent.device, latent.dtype)
                 )
-                latents = latents * latents_std / self.vae.config.scaling_factor + latents_mean
+                latent = latent * latents_std / self.vae.config.scaling_factor + latents_mean
             else:
-                latents = latents / self.vae.config.scaling_factor
+                latent = latent / self.vae.config.scaling_factor
 
-            image = self.vae.decode(latents, return_dict=False)[0]
+            image = self.vae.decode(latent, return_dict=False)[0]
 
             # cast back to fp16 if needed
             if needs_upcasting:
                 self.vae.to(dtype=torch.float16)
         else:
-            image = latents
+            image = latent
 
         # Return PIL Image.
         image = image[0].clip_(-1, 1) * 0.5 + 0.5
