@@ -949,6 +949,9 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         boostrap_mix_steps: Optional[float] = None,
         bootstrap_leak_sensitivity: Optional[float] = None,
         preprocess_mask_cover_alpha: Optional[float] = None,
+        # SDXL Pipeline setting.
+        guidance_rescale: float = 0.7,
+        output_type = 'pil',
     ) -> Image.Image:
         r"""Arbitrary-size image generation from multiple pairs of (regional)
         text prompt-mask pairs.
@@ -1157,27 +1160,22 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
 
         # SDXL pipeline settings.
         batch_size = 1
-        output_type = 'pil'
-
-        guidance_rescale = 0.7
-
-        prompt_2 = None
-        device = self.device
         num_images_per_prompt = 1
-        negative_prompt_2 = None
 
         original_size = (height, width)
         target_size = (height, width)
         crops_coords_top_left = (0, 0)
-        negative_crops_coords_top_left = (0, 0)
         negative_original_size = None
         negative_target_size = None
+        negative_crops_coords_top_left = (0, 0)
+
+        prompt_2 = None
+        negative_prompt_2 = None
+        prompt_embeds = None
+        negative_prompt_embeds = None
         pooled_prompt_embeds = None
         negative_pooled_prompt_embeds = None
         text_encoder_lora_scale = None
-
-        prompt_embeds = None
-        negative_prompt_embeds = None
 
         (
             prompt_embeds,
@@ -1187,7 +1185,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
         ) = self.encode_prompt(
             prompt=prompts,
             prompt_2=prompt_2,
-            device=device,
+            device=self.device,
             num_images_per_prompt=num_images_per_prompt,
             do_classifier_free_guidance=do_classifier_free_guidance,
             negative_prompt=negative_prompts,
@@ -1286,9 +1284,9 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
             add_time_ids = torch.cat([negative_add_time_ids, add_time_ids], dim=0)
         del negative_prompt_embeds, negative_pooled_prompt_embeds, negative_add_time_ids
 
-        prompt_embeds = prompt_embeds.to(device)
-        add_text_embeds = add_text_embeds.to(device)
-        add_time_ids = add_time_ids.to(device).repeat(batch_size * num_images_per_prompt, 1)
+        prompt_embeds = prompt_embeds.to(self.device)
+        add_text_embeds = add_text_embeds.to(self.device)
+        add_time_ids = add_time_ids.to(self.device).repeat(batch_size * num_images_per_prompt, 1)
 
 
         ### Run
