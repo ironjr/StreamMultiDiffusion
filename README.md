@@ -1,6 +1,7 @@
 <div align="center">
 
 <h1>StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</h1>
+<h4>Now Supports Stable Diffusion 3</h4>
 
 [**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
 
@@ -94,8 +95,9 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ![demo_v2](./assets/demo_v2.gif)
 
-- 🔥 April 30, 2024: Real-time interactive generation demo is now published at [Hugging Face Space](https://huggingface.co/spaces/ironjr/StreamMultiDiffusion)!
-- 🔥 April 23, 2024: Real-time interactive generation demo is updated to [version 2](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/stream_v2)! We now have fully responsive interface with `gradio.ImageEditor`. Huge thanks to [@pngwn](https://github.com/pngwn) and Hugging Face 🤗 Gradio team for the [great update (4.27)](https://www.gradio.app/changelog#4-27-0)!
+- 🔥 June 22, 2024: We now support [Stable Diffusion 3](https://huggingface.co/stabilityai/stable-diffusion-3-medium) powered by [Flash Diffusion](https://huggingface.co/jasperai/flash-sd3)! Installation guide is updated for SD3. See [notebooks](https://github.com/ironjr/StreamMultiDiffusion/tree/main/notebooks) directory for the newly updated Jupyter notebook demo.
+- ✅ April 30, 2024: Real-time interactive generation demo is now published at [Hugging Face Space](https://huggingface.co/spaces/ironjr/StreamMultiDiffusion)!
+- ✅ April 23, 2024: Real-time interactive generation demo is updated to [version 2](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/stream_v2)! We now have fully responsive interface with `gradio.ImageEditor`. Huge thanks to [@pngwn](https://github.com/pngwn) and Hugging Face 🤗 Gradio team for the [great update (4.27)](https://www.gradio.app/changelog#4-27-0)!
 - ✅ March 24, 2024: Our new demo app _Semantic Palette SDXL_ is out at [Hugging Face Space](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)! Great thanks to [Cagliostro Research Lab](https://cagliostrolab.net/) for the permission of [Animagine XL 3.1](https://huggingface.co/cagliostrolab/animagine-xl-3.1) model used in the demo!
 - ✅ March 24, 2024: We now (experimentally) support SDXL with [Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) in our semantic palette demo! Streaming type with SDXL-Lighning is under development.
 - ✅ March 23, 2024: We now support `.safetensors` type models. Please see the instructions in Usage section.
@@ -116,6 +118,16 @@ conda create -n smd python=3.10 && conda activate smd
 git clone https://github.com/ironjr/StreamMultiDiffusion
 pip install -r requirements.txt
 ```
+
+### For SD3 (🔥NEW!!!)
+
+We now support Stable Diffusion 3. To enable the feature, in addition to above installation code, enter the following code in your terminal.
+
+```bash
+pip install git+https://github.com/initml/diffusers.git@clement/feature/flash_sd3
+```
+
+This will allow you to use [Flash Diffusion for SD3](https://huggingface.co/jasperai/flash-sd3). For using SD3 pipelines, please refer to newly updated Jupyter demos in the [notebooks](https://github.com/ironjr/StreamMultiDiffusion/tree/main/notebooks) directory.
 
 ## ⚡ Usage
 
@@ -479,7 +491,105 @@ image.save('my_beautiful_creation.png')
 
 ---
 
-### (🔥NEW!) Region-Based Multi-Text-to-Image Generation with Custom SDXL
+### (🔥NEW!!!) Region-Based Multi-Text-to-Image Generation with Stable Diffusion 3
+
+We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs using custom SDXL models.
+This is powered by [SDXL-Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) and our stabilization trick for MultiDiffusion in conjunction with Lightning-type sampling algorithm.
+
+**Result:**
+
+| ![mask](./assets/fantasy_large/fantasy_large_full.png) | ![result](./assets/fantasy_large_sd3_generation.png) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input | Generated Image (**6.3 sec!**) |
+
+<p align="center">
+    1024x1024 image generated with <a href="https://huggingface.co/stabilityai/stable-diffusion-3-medium">Stable Diffusion 3</a> accelerated by <a href="https://huggingface.co/jasperai/flash-sd3">Flash Diffusion</a>.
+</p>
+
+**Code:**
+
+```python
+import torch
+from model import StableMultiDiffusion3Pipeline
+from util import seed_everything
+from prompt_util import print_prompts, preprocess_prompts
+
+# The following packages are imported only for loading the images.
+import torchvision.transforms as T
+import requests
+from functools import reduce
+from io import BytesIO
+from PIL import Image
+
+
+seed = 1
+device = 0
+
+# Load the module.
+seed_everything(seed)
+device = torch.device(f'cuda:{device}')
+smd = StableMultiDiffusionSDXLPipeline(
+    device,
+    hf_key='cagliostrolab/animagine-xl-3.1',
+    has_i2t=False,
+)
+
+# Load prompts.
+prompts = [
+    # Background prompt.
+    'blue sky with large words "Stream" on it',
+    # Foreground prompts.
+    'a photo of the dolomites, masterpiece, absurd quality, background, no humans',
+    'a photo of Gandalf the Gray staring at the viewer',
+]
+negative_prompts = [
+    '1girl, 1boy, humans, humans, humans',
+    '1girl, 1boy, humans, humans, humans',
+    '',
+]
+negative_prompt_prefix = 'worst quality, bad quality, normal quality, cropped, framed'
+negative_prompts = [negative_prompt_prefix + ', ' + p for p in negative_prompts]
+
+# Preprocess prompts for better results.
+prompts, negative_prompts = preprocess_prompts(
+    prompts,
+    negative_prompts,
+    style_name='(None)',
+    quality_name='Standard v3.1',
+)
+
+# Load masks.
+masks = []
+for i in range(1, 3):
+    url = f'https://raw.githubusercontent.com/ironjr/StreamMultiDiffusion/main/assets/fantasy_large/fantasy_large_{i}.png'
+    response = requests.get(url)
+    mask = Image.open(BytesIO(response.content)).convert('RGBA')
+    mask = (T.ToTensor()(mask)[-1:] > 0.5).float()
+    masks.append(mask)
+# In this example, background is simply set as non-marked regions.
+background = reduce(torch.logical_and, [m == 0 for m in masks])
+masks = torch.stack([background] + masks, dim=0).float()
+
+height, width = masks.shape[-2:] # (1024, 1024) in this example.
+
+# Sample an image.
+image = smd(
+    prompts,
+    negative_prompts,
+    masks=masks,
+    mask_strengths=1,
+    mask_stds=0,
+    height=height,
+    width=width,
+    bootstrap_steps=2,
+    guidance_scale=0,
+)
+image.save('my_beautiful_creation.png')
+```
+
+---
+
+### Region-Based Multi-Text-to-Image Generation with Custom SDXL
 
 We support arbitrary-sized image generation from arbitrary number of prompt-mask pairs using custom SDXL models.
 This is powered by [SDXL-Lightning LoRA](https://huggingface.co/ByteDance/SDXL-Lightning) and our stabilization trick for MultiDiffusion in conjunction with Lightning-type sampling algorithm.

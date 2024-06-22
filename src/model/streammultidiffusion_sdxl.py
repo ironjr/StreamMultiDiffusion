@@ -19,7 +19,7 @@
 # SOFTWARE.
 
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
-from diffusers import DiffusionPipeline, LCMScheduler, EulerDiscreteScheduler, AutoencoderTiny
+from diffusers import DiffusionPipeline, StableDiffusionXLPipeline, LCMScheduler, EulerDiscreteScheduler, AutoencoderTiny, UNet2DConditionModel
 from huggingface_hub import hf_hub_download
 
 import torch
@@ -1043,7 +1043,7 @@ class StreamMultiDiffusionSDXL(nn.Module):
 
             if is_double_cond:
                 negative_prompt_embed = torch.lerp(self.background.embed[1], negative_prompt_embed, s)[None].repeat(t, 1, 1, 1)  # (1, 77, 768)
-                add_text_embeds = torch.cat([negative_pooled_prompt_embeds, add_text_embeds], dim=0)
+                add_text_embeds = torch.cat([negative_pooled_prompt_embed, add_text_embeds], dim=0)
                 add_time_ids = torch.cat([negative_add_time_ids, add_time_ids], dim=0)
 
             if is_appending:

@@ -18,7 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .stablemultidiffusion_pipeline import StableMultiDiffusionPipeline
-from .stablemultidiffusion_sdxl_pipeline import StableMultiDiffusionSDXLPipeline
+from .pipeline_stablemultidiffusion import StableMultiDiffusionPipeline
+from .pipeline_stablemultidiffusion_sdxl import StableMultiDiffusionSDXLPipeline
+from .pipeline_stablemultidiffusion_3 import StableMultiDiffusion3Pipeline
 from .streammultidiffusion import StreamMultiDiffusion
 from .streammultidiffusion_sdxl import StreamMultiDiffusionSDXL
+from .streammultidiffusion_3 import StreamMultiDiffusion3

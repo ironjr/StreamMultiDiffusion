@@ -2,7 +2,7 @@ torch==2.0.1
 torchvision
 xformers==0.0.22
 einops
-diffusers
+diffusers>=0.29.0
 transformers==4.39.1
 huggingface_hub[torch]
 Pillow
@@ -12,3 +12,5 @@ tqdm
 jupyterlab
 gradio==4.27.0
 peft==0.10.0
+sentencepiece
+protobuf

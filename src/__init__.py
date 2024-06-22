@@ -21,6 +21,8 @@
 from model import (
     StableMultiDiffusionPipeline,
     StableMultiDiffusionSDXLPipeline,
+    StableMultiDiffusion3Pipeline,
     StreamMultiDiffusion,
     StreamMultiDiffusionSDXL,
+    StreamMultiDiffusion3,
 )
