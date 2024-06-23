@@ -5,7 +5,7 @@
 
 | ![mask](./assets/fantasy_large/fantasy_large_full.png) | ![result](./assets/fantasy_large_sd3_generation.png) |
 | :----------------------------: | :----------------------------: |
-| Semantic Brush Input (1024x1024 | Generated Image with SD3 (**6.3 sec!**) |
+| Semantic Brush Input (1024x1024) | Generated Image with SD3 (**6.3 sec!**) |
 
 [**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
 
