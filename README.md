@@ -1,7 +1,11 @@
 <div align="center">
 
 <h1>StreamMultiDiffusion: Real-Time Interactive Generation</br>with Region-Based Semantic Control</h1>
-<h4>Now Supports Stable Diffusion 3</h4>
+<h4>🔥🔥🔥 Now Supports Stable Diffusion 3 🔥🔥🔥</h4>
+
+| ![mask](./assets/fantasy_large/fantasy_large_full.png) | ![result](./assets/fantasy_large_sd3_generation.png) |
+| :----------------------------: | :----------------------------: |
+| Semantic Brush Input (1024x1024 | Generated Image with SD3 (**6.3 sec!**) |
 
 [**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
 
