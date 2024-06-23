@@ -1,0 +1,13 @@
+torch==2.0.1
+torchvision
+xformers==0.0.22
+einops
+diffusers @ git+https://github.com/initml/diffusers.git@clement/feature/flash_sd3
+transformers
+huggingface_hub[torch]
+gradio==4.39.0
+Pillow
+emoji
+numpy
+tqdm
+jupyterlab
