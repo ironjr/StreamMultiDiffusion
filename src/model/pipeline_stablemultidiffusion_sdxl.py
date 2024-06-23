@@ -1338,7 +1338,7 @@ class StableMultiDiffusionSDXLPipeline(nn.Module):
                         # Treat the first foreground latent as the background latent if one does not exist.
                         bg_latent_ = noise_bg_latents[i][..., h_start:h_end, w_start:w_end] if has_background else latent_[:1]
                         white_ = white[..., h_start:h_end, w_start:w_end]
-                        white_ = self.scheduler_add_noise(white_, noise, i, initial=True)
+                        white_ = self.scheduler_add_noise(white_, noise[..., h_start:h_end, w_start:w_end], i, initial=True)
                         bg_latent_ = mix_ratio * white_ + (1.0 - mix_ratio) * bg_latent_
                         latent_ = (1.0 - fg_mask_) * bg_latent_ + fg_mask_ * latent_
 
