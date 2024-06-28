@@ -374,16 +374,16 @@ example_root = os.path.join(root, 'examples')
 example_images = glob.glob(os.path.join(example_root, '*.png'))
 example_images = [Image.open(i) for i in example_images]
 
-with open(os.path.join(example_root, 'prompt_background_advanced.txt')) as f:
+with open(os.path.join(example_root, 'prompt_background_advanced.txt'), 'r', encoding='utf-8') as f:
     prompts_background = [l.strip() for l in f.readlines() if l.strip() != '']
 
-with open(os.path.join(example_root, 'prompt_girl.txt')) as f:
+with open(os.path.join(example_root, 'prompt_girl.txt'), 'r', encoding='utf-8') as f:
     prompts_girl = [l.strip() for l in f.readlines() if l.strip() != '']
 
-with open(os.path.join(example_root, 'prompt_boy.txt')) as f:
+with open(os.path.join(example_root, 'prompt_boy.txt'), 'r', encoding='utf-8') as f:
     prompts_boy = [l.strip() for l in f.readlines() if l.strip() != '']
 
-with open(os.path.join(example_root, 'prompt_props.txt')) as f:
+with open(os.path.join(example_root, 'prompt_props.txt'), 'r', encoding='utf-8') as f:
     prompts_props = [l.strip() for l in f.readlines() if l.strip() != '']
     prompts_props = {l.split(',')[0].strip(): ','.join(l.split(',')[1:]).strip() for l in prompts_props}
 
