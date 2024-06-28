@@ -5,7 +5,7 @@
 
 | ![mask](./assets/fantasy_large/fantasy_large_full.png) | ![result](./assets/fantasy_large_sd3_generation.png) |
 | :----------------------------: | :----------------------------: |
-| Semantic Brush Input (1024x1024 | Generated Image with SD3 (**6.3 sec!**) |
+| Semantic Brush Input (1024x1024) | Generated Image with SD3 (**6.3 sec!**) |
 
 [**Jaerin Lee**](http://jaerinlee.com/) · [**Daniel Sungho Jung**](https://dqj5182.github.io/) · [**Kanggeon Lee**](https://github.com/dlrkdrjs97/) · [**Kyoung Mu Lee**](https://cv.snu.ac.kr/index.php/~kmlee/)
 
@@ -25,6 +25,7 @@
 [![HFDemoMain](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-Main-yellow)](https://huggingface.co/spaces/ironjr/StreamMultiDiffusion)
 [![HFDemo1](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SemanticPaletteSD1.5-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette)
 [![HFDemo2](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SemanticPaletteSDXL-yellow)](https://huggingface.co/spaces/ironjr/SemanticPaletteXL)
+[![HFDemo3](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-SemanticPaletteSD3-yellow)](https://huggingface.co/spaces/ironjr/SemanticPalette3)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/camenduru/SemanticPalette-jupyter/blob/main/SemanticPalette_jupyter.ipynb)
 
 </div>
@@ -99,6 +100,7 @@ However, we have decreased the latency **from an hour to a minute**, making the 
 
 ![demo_v2](./assets/demo_v2.gif)
 
+- 🔥 June 24, 2024: We have launched our demo of Semantic Palette for vanilla **Stable Diffusion 3** in the Hugging Face 🤗 Space [here](https://huggingface.co/spaces/ironjr/SemanticPalette3)! If you want to run this in your local, we also provided code in this repository: see [here](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/semantic_palette_sd3). Make sure to have enough VRAM!
 - 🔥 June 22, 2024: We now support [Stable Diffusion 3](https://huggingface.co/stabilityai/stable-diffusion-3-medium) powered by [Flash Diffusion](https://huggingface.co/jasperai/flash-sd3)! Installation guide is updated for SD3. See [notebooks](https://github.com/ironjr/StreamMultiDiffusion/tree/main/notebooks) directory for the newly updated Jupyter notebook demo.
 - ✅ April 30, 2024: Real-time interactive generation demo is now published at [Hugging Face Space](https://huggingface.co/spaces/ironjr/StreamMultiDiffusion)!
 - ✅ April 23, 2024: Real-time interactive generation demo is updated to [version 2](https://github.com/ironjr/StreamMultiDiffusion/tree/main/demo/stream_v2)! We now have fully responsive interface with `gradio.ImageEditor`. Huge thanks to [@pngwn](https://github.com/pngwn) and Hugging Face 🤗 Gradio team for the [great update (4.27)](https://www.gradio.app/changelog#4-27-0)!
