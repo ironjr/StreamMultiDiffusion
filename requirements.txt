@@ -2,7 +2,7 @@ torch==2.0.1
 torchvision
 xformers==0.0.22
 einops
-diffusers>=0.29.0
+diffusers>=0.30.0
 transformers==4.39.1
 huggingface_hub[torch]
 Pillow
